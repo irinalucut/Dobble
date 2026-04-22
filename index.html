@@ -36,7 +36,10 @@
       outline: none;
       box-shadow: 0 0 0 2px rgba(244, 208, 63, 0.5);
     }
-    /* Animație scor: bump la adăugare punct */
+    .score-bump {
+      animation: bump 0.4s ease;
+    }
+   
     .score-bump { animation: bump 0.4s ease; }
     @keyframes bump {
       0%,100% { transform: scale(1); }
@@ -59,16 +62,18 @@
     <section id="players-section" class="flex flex-wrap justify-center gap-4 items-end">
       <div class="flex flex-col gap-1">
         <label for="p1Name" class="text-xs text-white/50 uppercase tracking-widest">Jucător 1</label>
+         <div class="flex items-center gap-2">
         <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16"
          class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white
                 placeholder-white/30 w-40 transition" />
         <input id="p1Color" type="color" value="#F4D03F" 
          class="w-9 h-9 rounded-lg border-2 border-white/20 cursor-pointer bg-transparent p-0.5"/>
-      
+      </div>
+      </div>
         <div class="flex flex-col gap-1">
         <label for="p2Name" class="text-xs text-white/50 uppercase tracking-widest">Jucător 2</label>
         <div class="flex items-center gap-2">
-        <input id="p2Name" type="text" placeholder="Adversar..." maxlength="16"
+        <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16"
          class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white
                 placeholder-white/30 w-40 transition" />
         <input id="p2Color" type="color" value="#E63946" 
@@ -85,7 +90,417 @@
   </main>
 
   <div id="gameMessage" class="text-white/60 text-sm h-5 transition-all"></div>
+<script>
+  class DobbleSymbol {
+      constructor(emoji, name, size = 40) {
+        this.emoji = emoji;
+        this.name = name;
+        this.x = 0;
+        this.y = 0;
+        this.size = size;
+        this.rotation = Math.random() * 360;  
 
+        this.isHovered = false;
+        this.isSelected = false;
+
+        this.scale = 1.0;
+        this.targetScale = 1.0;
+      }
+
+      tick() { this.scale += (this.targetScale - this.scale) * 0.15; }
+
+      setHovered(v) { this.isHovered = v; this.targetScale = v ? 1.3 : (this.isSelected ? 1.5 : 1.0); }
+      setSelected(v) { this.isSelected = v; this.targetScale = v ? 1.5 : 1.0; }
+
+      contains(mx, my) {
+        const h = (this.size * this.scale) / 2;
+        return mx >= this.x - h && mx <= this.x + h && my >= this.y - h && my <= this.y + h;
+      }
+
+      reset() { this.isHovered = this.isSelected = false; this.scale = this.targetScale = 1.0; }
+
+      static _pool = null;
+
+      static getAllSymbols() {
+        if (DobbleSymbol._pool) return DobbleSymbol._pool;
+        DobbleSymbol._pool = [
+          ['🌟', 'stea'], ['🔥', 'foc'], ['🌊', 'val'], ['🎯', 'tinta'], ['⚡', 'fulger'],
+          ['🌈', 'curcubeu'], ['🍀', 'trifoi'], ['🦋', 'fluture'], ['🎃', 'dovleac'], ['🔮', 'cristal'],
+          ['🎸', 'chitara'], ['🚀', 'racheta'], ['💎', 'diamant'], ['🌙', 'luna'], ['🐉', 'dragon'],
+          ['🦁', 'leu'], ['🌺', 'floare'], ['⚓', 'ancora'], ['🎭', 'teatru'], ['🏆', 'trofeu'],
+          ['🌵', 'cactus'], ['🦄', 'unicorn'], ['🍄', 'ciuperca'], ['🎨', 'paleta'], ['🌍', 'glob'],
+          ['🧲', 'magnet'], ['🎲', 'zar'], ['🌻', 'soare'], ['🦊', 'vulpe'], ['🐬', 'delfin'],
+          ['🏰', 'castel'], ['🎵', 'nota'], ['🌴', 'palmier'], ['🦅', 'vultur'], ['🍕', 'pizza'],
+          ['🌋', 'vulcan'], ['🐙', 'caracatita'], ['🦸', 'erou'], ['🦩', 'flamingo'], ['🍦', 'inghetata'],
+          ['🎆', 'artificii'], ['🌠', 'stea2'], ['🧸', 'urs'], ['🦚', 'paun'], ['🎋', 'bambus'],
+          ['🏄', 'surf'], ['🎻', 'vioara'], ['🎠', 'carusel'], ['🍳', 'ou_tigaie'], ['🎡', 'roata'],
+          ['🏔️', 'munte'], ['🎪', 'cortul'], ['🥐', 'croissant'], ['🍪', 'cookie'], ['🔫', 'pistol'], ['🍔', 'hamburguer'],
+        ].map(([e, n]) => ({ emoji: e, name: n }));
+        return DobbleSymbol._pool;
+      }
+
+      static getRandomSymbols(count) {
+        const all = [...DobbleSymbol.getAllSymbols()];
+        
+        for (let i = all.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [all[i], all[j]] = [all[j], all[i]]; 
+        }
+        return all.slice(0, count).map(d => new DobbleSymbol(d.emoji, d.name));
+      }
+    }
+    class Card {
+      constructor(id, symbols, radius = 155) {
+        this.id = id;
+        this.symbols = symbols;
+        this.x = 0;
+        this.y = 0;
+        this.radius = radius;
+        this.isActive = false;
+      }
+
+      layout() {
+        if (!this.symbols.length) return;
+        
+        this.symbols[0].x = this.x;
+        this.symbols[0].y = this.y;
+        
+        const rest = this.symbols.slice(1);
+        const orbit = this.radius * 0.63;
+        rest.forEach((sym, i) => {
+          const angle = (i / rest.length) * Math.PI * 2 - Math.PI / 2;
+          sym.x = this.x + Math.cos(angle) * orbit;
+          sym.y = this.y + Math.sin(angle) * orbit;
+        });
+      }
+
+      setPosition(x, y) { this.x = x; this.y = y; this.layout(); }
+
+      draw(p, cardBg, cardBorder, shadowColor) {
+        p.drawingContext.shadowOffsetX = 0;
+        p.drawingContext.shadowOffsetY = 10;
+        p.drawingContext.shadowBlur = 30;
+        p.drawingContext.shadowColor = shadowColor;
+
+        p.push();
+        p.fill(cardBg);
+        p.stroke(this.isActive ? '#F4D03F' : cardBorder);
+        p.strokeWeight(this.isActive ? 5 : 2);
+        p.circle(this.x, this.y, this.radius * 2);
+        p.pop();
+
+        p.drawingContext.shadowBlur = 0;
+
+        this.symbols.forEach(sym => {
+          sym.tick();
+          p.push();
+          p.translate(sym.x, sym.y);
+          p.rotate(p.radians(sym.rotation * 0.07));
+          p.scale(sym.scale);
+          if (sym.isHovered || sym.isSelected) {
+            p.noStroke();
+            p.fill(sym.isSelected ? 'rgba(244,208,63,0.4)' : 'rgba(255,255,255,0.55)');
+            p.circle(0, 0, sym.size * 1.7);
+          }
+          p.textAlign(p.CENTER, p.CENTER);
+          p.textSize(sym.size);
+          p.noStroke();
+          p.text(sym.emoji, 0, 0);
+          p.pop();
+        });
+      }
+
+      onMouseMove(mx, my) {
+        let found = null;
+        this.symbols.forEach(s => { const o = s.contains(mx, my); s.setHovered(o); if (o) found = s; });
+        return found;
+      }
+
+      onClick(mx, my) {
+        for (const s of this.symbols) {
+          if (s.contains(mx, my)) { s.setSelected(!s.isSelected); return s; }
+        }
+        return null;
+      }
+
+      hasSymbol(name) { return this.symbols.some(s => s.name === name); }
+      findCommon(other) { return this.symbols.find(s => other.hasSymbol(s.name)) || null; }
+      reset() { this.isActive = false; this.symbols.forEach(s => s.reset()); }
+    }
+    class Player {
+      constructor(id, name, color) {
+        this.id = id;
+        this.name = name.trim() || `Jucător ${id}`;
+        this.color = color;
+        this.score = 0;
+
+        this.nameEl = document.getElementById(`p${id}NameDisplay`);
+        this.scoreEl = document.getElementById(`p${id}ScoreDisplay`);
+
+        this.render();
+      }
+
+      addPoint() {
+        this.score++;
+        this.render();
+       
+        this.scoreEl.classList.remove('score-bump');
+        void this.scoreEl.offsetWidth; 
+        this.scoreEl.classList.add('score-bump');
+      }
+
+      resetScore() { this.score = 0; this.render(); }
+      setName(n) { this.name = n.trim() || `Jucător ${this.id}`; this.nameEl.textContent = this.name; }
+      setColor(c) { this.color = c; if (this.scoreEl) this.scoreEl.style.color = c; }
+
+      render() {
+        if (this.nameEl) this.nameEl.textContent = this.name;
+        if (this.scoreEl) { this.scoreEl.textContent = this.score; this.scoreEl.style.color = this.color; }
+      }
+    }
+    class DobbleGame {
+      constructor({ symbolsPerCard = 7 } = {}) {
+        this.symbolsPerCard = symbolsPerCard;
+        this.state = 'idle';
+        this.players = [];
+        this.deck = [];
+        this.currentCards = [];
+        this.commonSymbol = null;
+        this.onCorrect = null;
+        this.onWrong = null;
+      }
+
+      setPlayers(players) { this.players = players; }
+
+      generateDeck() {
+        const n = this.symbolsPerCard;
+        const pool = DobbleSymbol.getRandomSymbols(n * n);
+        const base = pool.slice(0, n);
+        this.deck = [];
+        for (let i = 0; i <= Math.min(n, 18); i++) {
+          const syms = i === 0
+            ? [...base]
+            : [base[i - 1], ...pool.slice(n + (i - 1) * (n - 1), n + i * (n - 1)).slice(0, n - 1)];
+          this.deck.push(new Card(i, syms));
+        }
+      }
+
+      start() {
+        if (!this.players.length) return false;
+        this.state = 'playing';
+        this.generateDeck();
+        this.deal();
+        return true;
+      }
+
+      deal() {
+        this.currentCards = [];
+        const n = Math.min(2, this.players.length, this.deck.length);
+        for (let i = 0; i < n; i++) {
+          const card = this.deck.shift();
+          if (card) { card.isActive = true; this.currentCards.push(card); }
+        }
+        if (this.currentCards.length === 2)
+          this.commonSymbol = this.currentCards[0].findCommon(this.currentCards[1]);
+        if (this.deck.length === 0 && this.currentCards.length === 0)
+          this.state = 'ended';
+      }
+
+      handleClick(player, symbol) {
+        if (this.state !== 'playing' || !this.commonSymbol) return 'idle';
+        if (symbol.name === this.commonSymbol.name) {
+          player.addPoint();
+          if (this.onCorrect) this.onCorrect(player, symbol);
+          this.deal();
+          return 'correct';
+        } else {
+          if (this.onWrong) this.onWrong(player, symbol);
+          return 'wrong';
+        }
+      }
+
+      reset() {
+        this.state = 'idle'; this.deck = []; this.currentCards = []; this.commonSymbol = null;
+        this.players.forEach(p => p.resetScore());
+      }
+    }
+
+    let p5Instance = null;
+
+    function createSketch(game, players, onSymbolClick) {
+      if (p5Instance) { p5Instance.remove(); p5Instance = null; }
+
+      const W = Math.min(window.innerWidth - 32, 720);
+      const H = Math.round(W * 0.65);
+
+      const THEME = { bg: '#1D3557', cardBg: '#FFFFFF', border: '#DDDDDD', shadow: 'rgba(0,0,0,0.35)' };
+
+      const sketch = (p) => {
+
+        p.setup = () => {
+          p.createCanvas(W, H).parent('canvasContainer');
+          p.frameRate(60);
+          p.textFont('Arial');
+          p.smooth();
+        };
+
+        p.draw = () => {
+          _bg(p);
+
+          const cards = game.currentCards;
+
+          if (cards.length === 0) {
+            _idle(p, game.state);
+          } else if (cards.length >= 2) {
+            const r = Math.min(W * 0.21, H * 0.43, 148);
+            const cx = W / 2;
+            const cy = H * 0.48;
+            const gap = r + 18;
+
+            cards[0].setPosition(cx - gap, cy);
+            cards[1].setPosition(cx + gap, cy);
+            cards[0].draw(p, THEME.cardBg, THEME.border, THEME.shadow);
+            cards[1].draw(p, THEME.cardBg, THEME.border, THEME.shadow);
+
+            _separator(p, H);
+            _playerLabels(p, players, cx - gap, cx + gap);
+            _scores(p, players, W, H);
+          }
+        };
+
+        p.mouseMoved = () => {
+          if (game.state !== 'playing') return;
+          game.currentCards.forEach(c => c.onMouseMove(p.mouseX, p.mouseY));
+        };
+
+        p.mousePressed = () => {
+          if (game.state !== 'playing') return;
+          const player = p.mouseX < W / 2 ? players[0] : players[1];
+          if (!player) return;
+          for (const card of game.currentCards) {
+            const sym = card.onClick(p.mouseX, p.mouseY);
+            if (sym) { onSymbolClick(player, sym); break; }
+          }
+        };
+
+        p.keyPressed = () => {
+          if (p.keyCode === p.ESCAPE && window.ui) window.ui.reset();
+        };
+
+        
+
+        function _bg(p) {
+          p.background(THEME.bg);
+          p.noStroke(); p.fill(255, 255, 255, 6);
+          for (let x = 0; x < W; x += 36)
+            for (let y = 0; y < H; y += 36)
+              p.circle(x + 18, y + 18, 2);
+        }
+
+        function _idle(p, state) {
+          p.textAlign(p.CENTER, p.CENTER); p.noStroke();
+          if (state === 'idle') {
+            p.textSize(W * 0.09); p.text('🎴', W / 2, H / 2 - 30);
+            p.fill(255, 255, 255, 140); p.textSize(W * 0.025);
+            p.text('Introdu jucătorii și apasă Start', W / 2, H / 2 + 40);
+          } else if (state === 'ended') {
+            p.textSize(W * 0.085); p.text('🏆', W / 2, H / 2 - 30);
+            p.fill(244, 208, 63); p.textSize(W * 0.028);
+            p.text('Joc terminat! Apasă Reset.', W / 2, H / 2 + 40);
+          }
+        }
+
+        function _separator(p, H) {
+          p.stroke(255, 255, 255, 35); p.strokeWeight(1);
+          p.drawingContext.setLineDash([5, 7]);
+          p.line(W / 2, 12, W / 2, H - 12);
+          p.drawingContext.setLineDash([]);
+        }
+
+        function _playerLabels(p, players, x1, x2) {
+          p.noStroke(); p.textSize(13); p.textAlign(p.CENTER, p.TOP);
+          if (players[0]) { p.fill(p.color(players[0].color)); p.text(players[0].name, x1, 8); }
+          if (players[1]) { p.fill(p.color(players[1].color)); p.text(players[1].name, x2, 8); }
+        }
+
+        function _scores(p, players, W, H) {
+          if (!players.length) return;
+          p.textAlign(p.CENTER, p.BOTTOM); p.noStroke();
+          if (players[0]) {
+            p.fill(p.color(players[0].color));
+            p.textSize(26); p.textStyle(p.BOLD); p.text(players[0].score, W * 0.25, H - 8);
+            p.textStyle(p.NORMAL);
+          }
+          if (players[1]) {
+            p.fill(p.color(players[1].color));
+            p.textSize(26); p.textStyle(p.BOLD); p.text(players[1].score, W * 0.75, H - 8);
+            p.textStyle(p.NORMAL);
+          }
+        }
+
+      };
+
+      p5Instance = new p5(sketch);
+      return p5Instance;
+    }
+    class UIController {
+      constructor(game) {
+        this.game = game;
+        this.players = [];
+        this.msgEl = document.getElementById('gameMessage');
+        this.msgTimer = null;
+
+        document.getElementById('p1Name').addEventListener('input', e => this.players[0]?.setName(e.target.value));
+        document.getElementById('p2Name').addEventListener('input', e => this.players[1]?.setName(e.target.value));
+        document.getElementById('p1Color').addEventListener('input', e => this.players[0]?.setColor(e.target.value));
+        document.getElementById('p2Color').addEventListener('input', e => this.players[1]?.setColor(e.target.value));
+
+        window.ui = this;
+      }
+
+      start() {
+        const n1 = document.getElementById('p1Name').value.trim();
+        const n2 = document.getElementById('p2Name').value.trim();
+
+        if (!n1) { document.getElementById('p1Name').focus(); this.msg('⚠️ Introdu numele Jucătorului 1!'); return; }
+
+        this.players = [
+          new Player(1, n1, document.getElementById('p1Color').value),
+          new Player(2, n2 || 'Jucător 2', document.getElementById('p2Color').value),
+        ];
+
+        this.game.setPlayers(this.players);
+        this.game.onCorrect = (player, sym) => this.msg(`✅ ${player.name} a găsit ${sym.emoji}! +1 punct`);
+        this.game.onWrong = (player, sym) => this.msg(`❌ ${player.name} a greșit cu ${sym.emoji}`);
+
+        if (!this.game.start()) return;
+
+        createSketch(this.game, this.players, (player, sym) => this.game.handleClick(player, sym));
+        this.msg(`🎮 ${this.players[0].name} vs ${this.players[1].name}`);
+      }
+
+      reset() {
+        if (this.game.state === 'playing' && !confirm('Resetezi jocul?')) return;
+        this.game.reset();
+        this.players = [];
+        createSketch(this.game, [], () => { });
+        this.msg('↺ Joc resetat.');
+      }
+
+      msg(text) {
+        this.msgEl.textContent = text;
+        clearTimeout(this.msgTimer);
+        this.msgTimer = setTimeout(() => { this.msgEl.textContent = ''; }, 3000);
+      }
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const game = new DobbleGame({ symbolsPerCard: 7 });
+      const ui = new UIController(game);
+      createSketch(game, [], () => { });
+    });
+
+
+</script>
 </body>
 
 </html>
