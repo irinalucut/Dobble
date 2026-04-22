@@ -90,7 +90,58 @@
   </main>
 
   <div id="gameMessage" class="text-white/60 text-sm h-5 transition-all"></div>
-<script>
+  <script>
+     const Button = {
+    x: 0, y: 0, width: 0, height: 0,
+    color: '', hoverColor: '',
+    label: '', labelColor: '',
+    cornerRadius: 12,
+
+    init: function(x, y, width, height, color, hoverColor, label, labelColor) {
+      this.x          = x;
+      this.y          = y;
+      this.width      = width;
+      this.height     = height;
+      this.color      = color;
+      this.hoverColor = hoverColor;
+      this.label      = label;
+      this.labelColor = labelColor;
+    },
+
+    draw: function(p) {
+      const isHovered = p.mouseX >= this.x && p.mouseX <= this.x + this.width
+                     && p.mouseY >= this.y && p.mouseY <= this.y + this.height;
+      
+      p.drawingContext.shadowColor = 'transparent';               
+      p.drawingContext.shadowOffsetX = 0;
+      p.drawingContext.shadowOffsetY = isHovered ? 6 : 3;
+      p.drawingContext.shadowBlur    = isHovered ? 18 : 8;
+      p.drawingContext.shadowColor   = 'transparent';
+
+      p.drawingContext.beginPath();
+      p.drawingContext.roundRect(this.x, this.y, this.width, this.height, this.cornerRadius);
+      p.drawingContext.fillStyle = isHovered ? this.hoverColor : this.color;
+      p.drawingContext.fill();
+
+      p.drawingContext.shadowBlur = 0;
+
+      p.fill(this.labelColor);
+      p.noStroke();
+      p.textAlign(p.CENTER, p.CENTER);
+      p.textSize(15);
+      p.textStyle(p.BOLD);
+      p.text(this.label, this.x + this.width / 2, this.y + this.height / 2);
+      p.textStyle(p.NORMAL);
+    },
+
+    checkIfClicked: function(mx, my, callback) {
+      if (mx >= this.x && mx <= this.x + this.width
+       && my >= this.y && my <= this.y + this.height) {
+        callback();
+      }
+    }
+  };
+
   class DobbleSymbol {
       constructor(emoji, name, size = 40) {
         this.emoji = emoji;
@@ -177,10 +228,10 @@
       setPosition(x, y) { this.x = x; this.y = y; this.layout(); }
 
       draw(p, cardBg, cardBorder, shadowColor) {
+        p.drawingContext.shadowBlur = 0;
         p.drawingContext.shadowOffsetX = 0;
         p.drawingContext.shadowOffsetY = 10;
-        p.drawingContext.shadowBlur = 30;
-        p.drawingContext.shadowColor = shadowColor;
+        p.drawingContext.shadowColor = 'transparent';
 
         p.push();
         p.fill(cardBg);
@@ -334,7 +385,26 @@
       const H = Math.round(W * 0.65);
 
       const THEME = { bg: '#1D3557', cardBg: '#FFFFFF', border: '#DDDDDD', shadow: 'rgba(0,0,0,0.35)' };
+      const BTN_W  = 120;
+    const BTN_H  = 40;
+    const BTN_Y  = H - 60;  
+    const CENTER = W / 2;
 
+    const startButton = Object.create(Button);
+    startButton.init(
+      CENTER - BTN_W - 14, BTN_Y,    
+      BTN_W, BTN_H,                  
+      '#27AE60', '#2ECC71',          
+      '▶  Start Joc', '#FFFFFF'       
+    );
+
+    const resetButton = Object.create(Button);
+    resetButton.init(
+      CENTER + 14, BTN_Y,
+      BTN_W, BTN_H,
+      '#C0392B', '#E74C3C',
+      '↺  Reset', '#FFFFFF'
+    );
       const sketch = (p) => {
 
         p.setup = () => {
@@ -366,6 +436,9 @@
             _playerLabels(p, players, cx - gap, cx + gap);
             _scores(p, players, W, H);
           }
+           startButton.draw(p);
+           resetButton.draw(p);
+      
         };
 
         p.mouseMoved = () => {
@@ -374,14 +447,23 @@
         };
 
         p.mousePressed = () => {
-          if (game.state !== 'playing') return;
-          const player = p.mouseX < W / 2 ? players[0] : players[1];
-          if (!player) return;
-          for (const card of game.currentCards) {
-            const sym = card.onClick(p.mouseX, p.mouseY);
-            if (sym) { onSymbolClick(player, sym); break; }
-          }
-        };
+         startButton.checkIfClicked(p.mouseX, p.mouseY, () => {
+          window.ui && window.ui.start();
+        });
+
+        resetButton.checkIfClicked(p.mouseX, p.mouseY, () => {
+          window.ui && window.ui.reset();
+        });
+
+        if (game.state !== 'playing') return;
+        const player = p.mouseX < W / 2 ? players[0] : players[1];
+        if (!player) return;
+        for (const card of game.currentCards) {
+          const sym = card.onClick(p.mouseX, p.mouseY);
+          if (sym) { onSymbolClick(player, sym); break; }
+        }
+      };
+      
 
         p.keyPressed = () => {
           if (p.keyCode === p.ESCAPE && window.ui) window.ui.reset();
