@@ -10,7 +10,34 @@
 </head>
 
 <body>
+<header>
+    <h1>🔵 Dobble</h1>
+  </header>
+ 
+  <main>
 
+    <section id="players-section">
+      <div>
+        <label for="p1Name">Jucător 1</label>
+        <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
+        <input id="p1Color" type="color" value="#F4D03F" />
+      </div>
+ 
+      <div>
+        <label for="p2Name">Jucător 2</label>
+        <input id="p2Name" type="text" placeholder="Adversar..." maxlength="16" />
+        <input id="p2Color" type="color" value="#E63946" />
+      </div>
+    </section>
+ 
+    <section id="game-section">
+      <div id="canvasContainer">
+      </div>
+    </section>
+ 
+  </main>
+
+  <div id="gameMessage"></div>
 
 </body>
 
