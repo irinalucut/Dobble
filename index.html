@@ -7,27 +7,74 @@
   <title>Dobble</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Baloo 2"', 'cursive'],
+            body:    ['Nunito', 'sans-serif']
+          },
+          colors: {
+            dobble: {
+              dark:   '#1a1040',
+              yellow: '#F4D03F',
+              red:    '#E63946'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #1D3557 0%, #0d1f33 60%, #1a1040 100%);
+      background-attachment: fixed;
+    }
+    input:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(244, 208, 63, 0.5);
+    }
+    /* Animație scor: bump la adăugare punct */
+    .score-bump { animation: bump 0.4s ease; }
+    @keyframes bump {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.5); }
+    }
+    canvas {
+      display: block;
+      border-radius: 1.5rem;
+    }
+  </style>
 </head>
 
-<body>
+<body class="font-body min-h-screen text-white flex flex-col items-center px-4 py-6 gap-5">
 <header>
-    <h1>🔵 Dobble</h1>
+    <h1 class="font-display text-5xl text-dobble-yellow tracking-wide drop-shadow-lg">🔵 Dobble</h1>
   </header>
  
-  <main>
+  <main class="w-full flex flex-col items-center gap-5">
 
-    <section id="players-section">
-      <div>
-        <label for="p1Name">Jucător 1</label>
-        <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
-        <input id="p1Color" type="color" value="#F4D03F" />
+    <section id="players-section" class="flex flex-wrap justify-center gap-4 items-end">
+      <div class="flex flex-col gap-1">
+        <label for="p1Name" class="text-xs text-white/50 uppercase tracking-widest">Jucător 1</label>
+        <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16"
+         class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white
+                placeholder-white/30 w-40 transition" />
+        <input id="p1Color" type="color" value="#F4D03F" 
+         class="w-9 h-9 rounded-lg border-2 border-white/20 cursor-pointer bg-transparent p-0.5"/>
+      
+        <div class="flex flex-col gap-1">
+        <label for="p2Name" class="text-xs text-white/50 uppercase tracking-widest">Jucător 2</label>
+        <div class="flex items-center gap-2">
+        <input id="p2Name" type="text" placeholder="Adversar..." maxlength="16"
+         class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white
+                placeholder-white/30 w-40 transition" />
+        <input id="p2Color" type="color" value="#E63946" 
+         class="w-9 h-9 rounded-lg border-2 border-white/20 cursor-pointer bg-transparent p-0.5" />
       </div>
- 
-      <div>
-        <label for="p2Name">Jucător 2</label>
-        <input id="p2Name" type="text" placeholder="Adversar..." maxlength="16" />
-        <input id="p2Color" type="color" value="#E63946" />
-      </div>
+    </div>
     </section>
  
     <section id="game-section">
@@ -37,7 +84,7 @@
  
   </main>
 
-  <div id="gameMessage"></div>
+  <div id="gameMessage" class="text-white/60 text-sm h-5 transition-all"></div>
 
 </body>
 
