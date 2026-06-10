@@ -1,588 +1,363 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="ro">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dobble</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700&display=swap" rel="stylesheet" />
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['"Baloo 2"', 'cursive'],
-            body:    ['Nunito', 'sans-serif']
-          },
-          colors: {
-            dobble: {
-              dark:   '#1a1040',
-              yellow: '#F4D03F',
-              red:    '#E63946'
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <style>
-    body {
-      background: linear-gradient(135deg, #ba7ff4 0%, #a949e4 60%, #9f32da 100%);
-      background-attachment: fixed;
-    }
-    input:focus {
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(244, 208, 63, 0.5);
-    }
-    .score-bump {
-      animation: bump 0.4s ease;
-    }
-   
-    .score-bump { animation: bump 0.4s ease; }
-    @keyframes bump {
-      0%,100% { transform: scale(1); }
-      50%      { transform: scale(1.5); }
-    }
-    canvas {
-      display: block;
-      border-radius: 1.5rem;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dobble</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+body {
+  background: #bd86ed;
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  gap: 15px;
+}
+h1 { font-size: 2rem; margin: 0; }
+.players { display: flex; gap: 20px; }
+.player-input { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 12px; opacity: 0.6; }
+input[type="text"] {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: white;
+  width: 150px;
+}
+#mesaj { font-size: 14px; opacity: 0.7; height: 20px; }
+</style>
 </head>
-
-<body class="font-body min-h-screen text-white flex flex-col items-center px-4 py-6 gap-5">
-<header>
-    <h1 class="font-display text-5xl text-dobble-black tracking-wide drop-shadow-lg">🟡 Dobble</h1>
-  </header>
- 
-  <main class="w-full flex flex-col items-center gap-5">
-
-    <section id="players-section" class="flex flex-wrap justify-center gap-4 items-end">
-      <div class="flex flex-col gap-1">
-        <label for="p1Name" class="text-xs text-white/50 uppercase tracking-widest">Jucător 1</label>
-         <div class="flex items-center gap-2">
-        <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16"
-         class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white
-                placeholder-white/30 w-40 transition" />
-        <input id="p1Color" type="color" value="#F4D03F" 
-         class="w-9 h-9 rounded-lg border-2 border-white/20 cursor-pointer bg-transparent p-0.5"/>
-      </div>
-      </div>
-        <div class="flex flex-col gap-1">
-        <label for="p2Name" class="text-xs text-white/50 uppercase tracking-widest">Jucător 2</label>
-        <div class="flex items-center gap-2">
-        <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16"
-         class="bg-white/10 border border-white/20 rounded-xl px-4 py-2 text-white
-                placeholder-white/30 w-40 transition" />
-        <input id="p2Color" type="color" value="#E63946" 
-         class="w-9 h-9 rounded-lg border-2 border-white/20 cursor-pointer bg-transparent p-0.5" />
-      </div>
+<body>
+<h1>🎲 Dobble</h1>
+<div class="players">
+  <div class="player-input">
+    <label>Jucător 1</label>
+    <div style="display:flex; gap:6px; align-items:center">
+      <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
+      <input id="p1Color" type="color" value="#F4D03F" />
     </div>
-    </section>
- 
-    <section id="game-section">
-      <div id="canvasContainer">
-      </div>
-    </section>
- 
-  </main>
+  </div>
+  <div class="player-input">
+    <label>Jucător 2</label>
+    <div style="display:flex; gap:6px; align-items:center">
+      <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16" />
+      <input id="p2Color" type="color" value="#E63946" />
+    </div>
+  </div>
+</div>
+<div id="canvasContainer"></div>
+<div id="mesaj"></div>
 
-  <div id="gameMessage" class="text-white/60 text-sm h-5 transition-all"></div>
-  <script>
-     const Button = {
-    x: 0, y: 0, width: 0, height: 0,
-    color: '', hoverColor: '',
-    label: '', labelColor: '',
-    cornerRadius: 12,
+<script>
+// ── config ──────────────────────────────────────────────────────────────────
+const boardWidth = Math.min(window.innerWidth - 40, 720);
+const boardHeight = Math.round(boardWidth * 0.65);
+const simboluriPerCard = 7;
 
-    init: function(x, y, width, height, color, hoverColor, label, labelColor) {
-      this.x          = x;
-      this.y          = y;
-      this.width      = width;
-      this.height     = height;
-      this.color      = color;
-      this.hoverColor = hoverColor;
-      this.label      = label;
-      this.labelColor = labelColor;
-    },
+// ── simboluri ────────────────────────────────────────────────────────────────
+const TOATE_SIMBOLURILE = [
+  ['🌟','stea'],['🔥','foc'],['🌊','val'],['🎯','tinta'],['⚡','fulger'],
+  ['🌈','curcubeu'],['🌵','cactus'],['🦋','fluture'],['🎃','dovleac'],['🔮','cristal'],
+  ['🎸','chitara'],['🚀','racheta'],['💎','diamant'],['🌙','luna'],['🐉','dragon'],
+  ['🦁','leu'],['🌺','floare'],['⚓','ancora'],['🎭','teatru'],['🏆','trofeu'],
+  ['🦄','unicorn'],['🍄','ciuperca'],['🎨','paleta'],['🌍','glob'],['🧲','magnet'],
+  ['🎲','zar'],['🌻','soare'],['🦊','vulpe'],['🐬','delfin'],['❤️','inima'],
+  ['🎵','nota'],['🌴','palmier'],['🦅','vultur'],['🍕','pizza'],['🌋','vulcan'],
+  ['🐙','caracatita'],['💧','lacrima'],['🦩','flamingo'],['🍦','inghetata'],['🎆','artificii'],
+  ['🌠','stea2'],['🧸','urs'],['🦚','paun'],['🎋','bambus'],['🏄','surf'],
+  ['🎻','vioara'],['🔒','lacat'],['🍳','ou'],['🎡','roata'],['🏔️','munte'],
+  ['🎪','cort'],['🥐','croissant'],['🍪','cookie'],['🍔','burger'],
+].map(([emoji, name]) => ({ emoji, name }));
 
-    draw: function(p) {
-      const isHovered = p.mouseX >= this.x && p.mouseX <= this.x + this.width
-                     && p.mouseY >= this.y && p.mouseY <= this.y + this.height;
-      
-      p.drawingContext.shadowColor = 'transparent';               
-      p.drawingContext.shadowOffsetX = 0;
-      p.drawingContext.shadowOffsetY = isHovered ? 6 : 3;
-      p.drawingContext.shadowBlur    = isHovered ? 18 : 8;
-      p.drawingContext.shadowColor   = 'transparent';
+function simboluriAleatoare(numar) {
+  const lista = [...TOATE_SIMBOLURILE];
+  for (let i = lista.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [lista[i], lista[j]] = [lista[j], lista[i]];
+  }
+  return lista.slice(0, numar);
+}
 
-      p.drawingContext.beginPath();
-      p.drawingContext.roundRect(this.x, this.y, this.width, this.height, this.cornerRadius);
-      p.drawingContext.fillStyle = isHovered ? this.hoverColor : this.color;
-      p.drawingContext.fill();
-
-      p.drawingContext.shadowBlur = 0;
-
-      p.fill(this.labelColor);
-      p.noStroke();
-      p.textAlign(p.CENTER, p.CENTER);
-      p.textSize(15);
-      p.textStyle(p.BOLD);
-      p.text(this.label, this.x + this.width / 2, this.y + this.height / 2);
-      p.textStyle(p.NORMAL);
-    },
-
-    checkIfClicked: function(mx, my, callback) {
-      if (mx >= this.x && mx <= this.x + this.width
-       && my >= this.y && my <= this.y + this.height) {
-        callback();
-      }
+// ── Buton ────────────────────────────────────────────────────────────────────
+const Buton = {
+  x: 0, y: 0, width: 0, height: 0, culoare: '', eticheta: '',
+  init: function (x, y, width, height, culoare, eticheta) {
+    this.x = x; this.y = y;
+    this.width = width; this.height = height;
+    this.culoare = culoare; this.eticheta = eticheta;
+  },
+  deseneaza: function () {
+    fill(this.culoare); noStroke();
+    rect(this.x, this.y, this.width, this.height, 8);
+    fill(255); textAlign(CENTER, CENTER); textSize(14);
+    text(this.eticheta, this.x + this.width / 2, this.y + this.height / 2);
+  },
+  esteClicat: function (mx, my, callback) {
+    if (mx >= this.x && mx <= this.x + this.width &&
+        my >= this.y && my <= this.y + this.height) {
+      callback();
     }
-  };
-
-  class DobbleSymbol {
-      constructor(emoji, name, size = 40) {
-        this.emoji = emoji;
-        this.name = name;
-        this.x = 0;
-        this.y = 0;
-        this.size = size;
-        this.rotation = Math.random() * 360;  
-
-        this.isHovered = false;
-        this.isSelected = false;
-
-        this.scale = 1.0;
-        this.targetScale = 1.0;
-      }
-
-      tick() { this.scale += (this.targetScale - this.scale) * 0.15; }
-
-      setHovered(v) { this.isHovered = v; this.targetScale = v ? 1.3 : (this.isSelected ? 1.5 : 1.0); }
-      setSelected(v) { this.isSelected = v; this.targetScale = v ? 1.5 : 1.0; }
-
-      contains(mx, my) {
-        const h = (this.size * this.scale) / 2;
-        return mx >= this.x - h && mx <= this.x + h && my >= this.y - h && my <= this.y + h;
-      }
-
-      reset() { this.isHovered = this.isSelected = false; this.scale = this.targetScale = 1.0; }
-
-      static _pool = null;
-
-      static getAllSymbols() {
-        if (DobbleSymbol._pool) return DobbleSymbol._pool;
-        DobbleSymbol._pool = [
-          ['🌟', 'stea'], ['🔥', 'foc'], ['🌊', 'val'], ['🎯', 'tinta'], ['⚡', 'fulger'],
-          ['🌈', 'curcubeu'], ['🌵', 'cactus'], ['🦋', 'fluture'], ['🎃', 'dovleac'], ['🔮', 'cristal'],
-          ['🎸', 'chitara'], ['🚀', 'racheta'], ['💎', 'diamant'], ['🌙', 'luna'], ['🐉', 'dragon'],
-          ['🦁', 'leu'], ['🌺', 'floare'], ['⚓', 'ancora'], ['🎭', 'teatru'], ['🏆', 'trofeu'],
-          ['🌵', 'cactus'], ['🦄', 'unicorn'], ['🍄', 'ciuperca'], ['🎨', 'paleta'], ['🌍', 'glob'],
-          ['🧲', 'magnet'], ['🎲', 'zar'], ['🌻', 'soare'], ['🦊', 'vulpe'], ['🐬', 'delfin'],
-          ['❤️', 'inimă'], ['🎵', 'nota'], ['🌴', 'palmier'], ['🦅', 'vultur'], ['🍕', 'pizza'],
-          ['🌋', 'vulcan'], ['🐙', 'caracatita'], ['💧', 'lacrimă'], ['🦩', 'flamingo'], ['🍦', 'inghetata'],
-          ['🎆', 'artificii'], ['🌠', 'stea2'], ['🧸', 'urs'], ['🦚', 'paun'], ['🎋', 'bambus'],
-          ['🏄', 'surf'], ['🎻', 'vioara'], ['🔒', 'lacăt'], ['🍳', 'ou_tigaie'], ['🎡', 'roata'],
-          ['🏔️', 'munte'], ['🎪', 'cortul'], ['🥐', 'croissant'], ['🍪', 'cookie'], ['🔫', 'pistol'], ['🍔', 'hamburguer'],
-        ].map(([e, n]) => ({ emoji: e, name: n }));
-        return DobbleSymbol._pool;
-      }
-
-      static getRandomSymbols(count) {
-        const all = [...DobbleSymbol.getAllSymbols()];
-        
-        for (let i = all.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [all[i], all[j]] = [all[j], all[i]]; 
-        }
-        return all.slice(0, count).map(d => new DobbleSymbol(d.emoji, d.name));
-      }
-    }
-    class Card {
-      constructor(id, symbols, radius = 155) {
-        this.id = id;
-        this.symbols = symbols;
-        this.x = 0;
-        this.y = 0;
-        this.radius = radius;
-        this.isActive = false;
-      }
-
-      layout() {
-        if (!this.symbols.length) return;
-        
-        this.symbols[0].x = this.x;
-        this.symbols[0].y = this.y;
-        
-        const rest = this.symbols.slice(1);
-        const orbit = this.radius * 0.63;
-        rest.forEach((sym, i) => {
-          const angle = (i / rest.length) * Math.PI * 2 - Math.PI / 2;
-          sym.x = this.x + Math.cos(angle) * orbit;
-          sym.y = this.y + Math.sin(angle) * orbit;
-        });
-      }
-
-      setPosition(x, y) { this.x = x; this.y = y; this.layout(); }
-
-      draw(p, cardBg, cardBorder, shadowColor) {
-        p.drawingContext.shadowBlur = 0;
-        p.drawingContext.shadowOffsetX = 0;
-        p.drawingContext.shadowOffsetY = 10;
-        p.drawingContext.shadowColor = 'transparent';
-
-        p.push();
-        p.fill(cardBg);
-        p.stroke(this.isActive ? '#F4D03F' : cardBorder);
-        p.strokeWeight(this.isActive ? 5 : 2);
-        p.circle(this.x, this.y, this.radius * 2);
-        p.pop();
-
-        p.drawingContext.shadowBlur = 0;
-
-        this.symbols.forEach(sym => {
-          sym.tick();
-          p.push();
-          p.translate(sym.x, sym.y);
-          p.rotate(p.radians(sym.rotation * 0.07));
-          p.scale(sym.scale);
-          if (sym.isHovered || sym.isSelected) {
-            p.noStroke();
-            p.fill(sym.isSelected ? 'rgba(244,208,63,0.4)' : 'rgba(255,255,255,0.55)');
-            p.circle(0, 0, sym.size * 1.7);
-          }
-          p.textAlign(p.CENTER, p.CENTER);
-          p.textSize(sym.size);
-          p.noStroke();
-          p.text(sym.emoji, 0, 0);
-          p.pop();
-        });
-      }
-
-      onMouseMove(mx, my) {
-        let found = null;
-        this.symbols.forEach(s => { const o = s.contains(mx, my); s.setHovered(o); if (o) found = s; });
-        return found;
-      }
-
-      onClick(mx, my) {
-        for (const s of this.symbols) {
-          if (s.contains(mx, my)) { s.setSelected(!s.isSelected); return s; }
-        }
-        return null;
-      }
-
-      hasSymbol(name) { return this.symbols.some(s => s.name === name); }
-      findCommon(other) { return this.symbols.find(s => other.hasSymbol(s.name)) || null; }
-      reset() { this.isActive = false; this.symbols.forEach(s => s.reset()); }
-    }
-    class Player {
-      constructor(id, name, color) {
-        this.id = id;
-        this.name = name.trim() || `Jucător ${id}`;
-        this.color = color;
-        this.score = 0;
-
-        this.nameEl = document.getElementById(`p${id}NameDisplay`);
-        this.scoreEl = document.getElementById(`p${id}ScoreDisplay`);
-
-        this.render();
-      }
-
-      addPoint() {
-        this.score++;
-        this.render();
-       
-        this.scoreEl.classList.remove('score-bump');
-        void this.scoreEl.offsetWidth; 
-        this.scoreEl.classList.add('score-bump');
-      }
-
-      resetScore() { this.score = 0; this.render(); }
-      setName(n) { this.name = n.trim() || `Jucător ${this.id}`; this.nameEl.textContent = this.name; }
-      setColor(c) { this.color = c; if (this.scoreEl) this.scoreEl.style.color = c; }
-
-      render() {
-        if (this.nameEl) this.nameEl.textContent = this.name;
-        if (this.scoreEl) { this.scoreEl.textContent = this.score; this.scoreEl.style.color = this.color; }
-      }
-    }
-    class DobbleGame {
-      constructor({ symbolsPerCard = 7 } = {}) {
-        this.symbolsPerCard = symbolsPerCard;
-        this.state = 'idle';
-        this.players = [];
-        this.deck = [];
-        this.currentCards = [];
-        this.commonSymbol = null;
-        this.onCorrect = null;
-        this.onWrong = null;
-      }
-
-      setPlayers(players) { this.players = players; }
-
-      generateDeck() {
-        const n = this.symbolsPerCard;
-        const pool = DobbleSymbol.getRandomSymbols(n * n);
-        const base = pool.slice(0, n);
-        this.deck = [];
-        for (let i = 0; i <= Math.min(n, 18); i++) {
-          const syms = i === 0
-            ? [...base]
-            : [base[i - 1], ...pool.slice(n + (i - 1) * (n - 1), n + i * (n - 1)).slice(0, n - 1)];
-          this.deck.push(new Card(i, syms));
-        }
-      }
-
-      start() {
-        if (!this.players.length) return false;
-        this.state = 'playing';
-        this.generateDeck();
-        this.deal();
-        return true;
-      }
-
-      deal() {
-        this.currentCards = [];
-        const n = Math.min(2, this.players.length, this.deck.length);
-        for (let i = 0; i < n; i++) {
-          const card = this.deck.shift();
-          if (card) { card.isActive = true; this.currentCards.push(card); }
-        }
-        if (this.currentCards.length === 2)
-          this.commonSymbol = this.currentCards[0].findCommon(this.currentCards[1]);
-        if (this.deck.length === 0 && this.currentCards.length === 0)
-          this.state = 'ended';
-      }
-
-      handleClick(player, symbol) {
-        if (this.state !== 'playing' || !this.commonSymbol) return 'idle';
-        if (symbol.name === this.commonSymbol.name) {
-          player.addPoint();
-          if (this.onCorrect) this.onCorrect(player, symbol);
-          this.deal();
-          return 'correct';
-        } else {
-          if (this.onWrong) this.onWrong(player, symbol);
-          return 'wrong';
-        }
-      }
-
-      reset() {
-        this.state = 'idle'; this.deck = []; this.currentCards = []; this.commonSymbol = null;
-        this.players.forEach(p => p.resetScore());
-      }
-    }
-
-    let p5Instance = null;
-
-    function createSketch(game, players, onSymbolClick) {
-      if (p5Instance) { p5Instance.remove(); p5Instance = null; }
-
-      const W = Math.min(window.innerWidth - 32, 720);
-      const H = Math.round(W * 0.65);
-
-      const THEME = { bg: '#FFF176', cardBg: '#FFFFFF', border: '#DDDDDD', shadow: 'rgba(0,0,0,0.35)' };
-      const BTN_W  = 120;
-    const BTN_H  = 40;
-    const BTN_Y  = H - 60;  
-    const CENTER = W / 2;
-
-    const startButton = Object.create(Button);
-    startButton.init(
-      CENTER - BTN_W - 14, BTN_Y,    
-      BTN_W, BTN_H,                  
-      '#27AE60', '#2ECC71',          
-      '▶  Start Joc', '#FFFFFF'       
-    );
-
-    const resetButton = Object.create(Button);
-    resetButton.init(
-      CENTER + 14, BTN_Y,
-      BTN_W, BTN_H,
-      '#C0392B', '#E74C3C',
-      '↺  Reset', '#FFFFFF'
-    );
-      const sketch = (p) => {
-
-        p.setup = () => {
-          p.createCanvas(W, H).parent('canvasContainer');
-          p.frameRate(60);
-          p.textFont('Arial');
-          p.smooth();
-        };
-
-        p.draw = () => {
-          _bg(p);
-
-          const cards = game.currentCards;
-
-          if (cards.length === 0) {
-            _idle(p, game.state);
-          } else if (cards.length >= 2) {
-            const r = Math.min(W * 0.21, H * 0.43, 148);
-            const cx = W / 2;
-            const cy = H * 0.48;
-            const gap = r + 18;
-
-            cards[0].setPosition(cx - gap, cy);
-            cards[1].setPosition(cx + gap, cy);
-            cards[0].draw(p, THEME.cardBg, THEME.border, THEME.shadow);
-            cards[1].draw(p, THEME.cardBg, THEME.border, THEME.shadow);
-
-            _separator(p, H);
-            _playerLabels(p, players, cx - gap, cx + gap);
-            _scores(p, players, W, H);
-          }
-           startButton.draw(p);
-           resetButton.draw(p);
-      
-        };
-
-        p.mouseMoved = () => {
-          if (game.state !== 'playing') return;
-          game.currentCards.forEach(c => c.onMouseMove(p.mouseX, p.mouseY));
-        };
-
-        p.mousePressed = () => {
-         startButton.checkIfClicked(p.mouseX, p.mouseY, () => {
-          window.ui && window.ui.start();
-        });
-
-        resetButton.checkIfClicked(p.mouseX, p.mouseY, () => {
-          window.ui && window.ui.reset();
-        });
-
-        if (game.state !== 'playing') return;
-        const player = p.mouseX < W / 2 ? players[0] : players[1];
-        if (!player) return;
-        for (const card of game.currentCards) {
-          const sym = card.onClick(p.mouseX, p.mouseY);
-          if (sym) { onSymbolClick(player, sym); break; }
-        }
-      };
-      
-
-        p.keyPressed = () => {
-          if (p.keyCode === p.ESCAPE && window.ui) window.ui.reset();
-        };
-
-        
-
-        function _bg(p) {
-          p.background(THEME.bg);
-          p.noStroke(); p.fill(255, 255, 255, 6);
-          for (let x = 0; x < W; x += 36)
-            for (let y = 0; y < H; y += 36)
-              p.circle(x + 18, y + 18, 2);
-        }
-
-        function _idle(p, state) {
-          p.textAlign(p.CENTER, p.CENTER); p.noStroke();
-          if (state === 'idle') {
-            p.textSize(W * 0.09); p.text('🔄', W / 2, H / 2 - 30);
-            p.fill(255, 255, 255, 140); p.textSize(W * 0.025);
-            p.text('Introdu jucătorii și apasă Start', W / 2, H / 2 + 40);
-          } else if (state === 'ended') {
-            p.textSize(W * 0.085); p.text('🏆', W / 2, H / 2 - 30);
-            p.fill(244, 208, 63); p.textSize(W * 0.028);
-            p.text('Joc terminat! Apasă Reset.', W / 2, H / 2 + 40);
-          }
-        }
-
-        function _separator(p, H) {
-          p.stroke(255, 255, 255, 35); p.strokeWeight(1);
-          p.drawingContext.setLineDash([5, 7]);
-          p.line(W / 2, 12, W / 2, H - 12);
-          p.drawingContext.setLineDash([]);
-        }
-
-        function _playerLabels(p, players, x1, x2) {
-          p.noStroke(); p.textSize(13); p.textAlign(p.CENTER, p.TOP);
-          if (players[0]) { p.fill(p.color(players[0].color)); p.text(players[0].name, x1, 8); }
-          if (players[1]) { p.fill(p.color(players[1].color)); p.text(players[1].name, x2, 8); }
-        }
-
-        function _scores(p, players, W, H) {
-          if (!players.length) return;
-          p.textAlign(p.CENTER, p.BOTTOM); p.noStroke();
-          if (players[0]) {
-            p.fill(p.color(players[0].color));
-            p.textSize(26); p.textStyle(p.BOLD); p.text(players[0].score, W * 0.25, H - 8);
-            p.textStyle(p.NORMAL);
-          }
-          if (players[1]) {
-            p.fill(p.color(players[1].color));
-            p.textSize(26); p.textStyle(p.BOLD); p.text(players[1].score, W * 0.75, H - 8);
-            p.textStyle(p.NORMAL);
-          }
-        }
-
-      };
-
-      p5Instance = new p5(sketch);
-      return p5Instance;
-    }
-    class UIController {
-      constructor(game) {
-        this.game = game;
-        this.players = [];
-        this.msgEl = document.getElementById('gameMessage');
-        this.msgTimer = null;
-
-        document.getElementById('p1Name').addEventListener('input', e => this.players[0]?.setName(e.target.value));
-        document.getElementById('p2Name').addEventListener('input', e => this.players[1]?.setName(e.target.value));
-        document.getElementById('p1Color').addEventListener('input', e => this.players[0]?.setColor(e.target.value));
-        document.getElementById('p2Color').addEventListener('input', e => this.players[1]?.setColor(e.target.value));
-
-        window.ui = this;
-      }
-
-      start() {
-        const n1 = document.getElementById('p1Name').value.trim();
-        const n2 = document.getElementById('p2Name').value.trim();
-
-        if (!n1) { document.getElementById('p1Name').focus(); this.msg('⚠️ Introdu numele Jucătorului 1!'); return; }
-
-        this.players = [
-          new Player(1, n1, document.getElementById('p1Color').value),
-          new Player(2, n2 || 'Jucător 2', document.getElementById('p2Color').value),
-        ];
-
-        this.game.setPlayers(this.players);
-        this.game.onCorrect = (player, sym) => this.msg(`✅ ${player.name} a găsit ${sym.emoji}! +1 punct`);
-        this.game.onWrong = (player, sym) => this.msg(`❌ ${player.name} a greșit cu ${sym.emoji}`);
-
-        if (!this.game.start()) return;
-
-        createSketch(this.game, this.players, (player, sym) => this.game.handleClick(player, sym));
-        this.msg(`🎮 ${this.players[0].name} vs ${this.players[1].name}`);
-      }
-
-      reset() {
-        if (this.game.state === 'playing' && !confirm('Resetezi jocul?')) return;
-        this.game.reset();
-        this.players = [];
-        createSketch(this.game, [], () => { });
-        this.msg('↺ Joc resetat.');
-      }
-
-      msg(text) {
-        this.msgEl.textContent = text;
-        clearTimeout(this.msgTimer);
-        this.msgTimer = setTimeout(() => { this.msgEl.textContent = ''; }, 3000);
-      }
-    }
-    document.addEventListener('DOMContentLoaded', () => {
-      const game = new DobbleGame({ symbolsPerCard: 7 });
-      const ui = new UIController(game);
-      createSketch(game, [], () => { });
+  },
+};
+
+// ── Card ─────────────────────────────────────────────────────────────────────
+const Card = {
+  simboluri: [], x: 0, y: 0, raza: 155,
+  init: function (simboluri) {
+    this.simboluri = simboluri.map((s) => ({
+      emoji: s.emoji, name: s.name,
+      x: 0, y: 0, size: 40,
+      rotatie: Math.random() * 360,
+      selectat: false,
+    }));
+  },
+  asazaSimboluri: function () {
+    const primul = this.simboluri[0];
+    primul.x = this.x; primul.y = this.y;
+    const restul = this.simboluri.slice(1);
+    const razaOrbit = this.raza * 0.63;
+    restul.forEach((sim, i) => {
+      const unghi = (i / restul.length) * Math.PI * 2 - Math.PI / 2;
+      sim.x = this.x + Math.cos(unghi) * razaOrbit;
+      sim.y = this.y + Math.sin(unghi) * razaOrbit;
     });
+  },
+  seteazaPozitie: function (x, y) {
+    this.x = x; this.y = y;
+    this.asazaSimboluri();
+  },
+  deseneaza: function () {
+    fill(255); stroke(200); strokeWeight(2);
+    circle(this.x, this.y, this.raza * 2);
+    this.simboluri.forEach((sim) => {
+      push();
+      translate(sim.x, sim.y);
+      rotate(radians(sim.rotatie * 0.07));
+      if (sim.selectat) {
+        noStroke(); fill('rgba(244,208,63,0.4)');
+        circle(0, 0, sim.size * 1.7);
+      }
+      textAlign(CENTER, CENTER); textSize(sim.size); noStroke();
+      text(sim.emoji, 0, 0);
+      pop();
+    });
+  },
+  clicat: function (mx, my) {
+    for (const sim of this.simboluri) {
+      const jumatate = sim.size / 2;
+      if (mx >= sim.x - jumatate && mx <= sim.x + jumatate &&
+          my >= sim.y - jumatate && my <= sim.y + jumatate) {
+        sim.selectat = !sim.selectat;
+        return sim;
+      }
+    }
+    return null;
+  },
+  areSimbol: function (name) {
+    return this.simboluri.some((s) => s.name === name);
+  },
+  gasesteComunul: function (altCard) {
+    return this.simboluri.find((s) => altCard.areSimbol(s.name)) || null;
+  },
+  reseteaza: function () {
+    this.simboluri.forEach((s) => { s.selectat = false; });
+  },
+};
 
+// ── jucatori ─────────────────────────────────────────────────────────────────
+let jucatori = [];
 
+function seteazaJucatori(noiJucatori) {
+  jucatori = noiJucatori;
+}
+
+function mesaj(text) {
+  const el = document.getElementById('mesaj');
+  el.textContent = text;
+  clearTimeout(mesaj._timer);
+  mesaj._timer = setTimeout(() => { el.textContent = ''; }, 3000);
+}
+
+// ── joc ───────────────────────────────────────────────────────────────────────
+const joc = {
+  stare: 'idle',
+  simboluriPerCard: simboluriPerCard,
+  pachet: [],
+  carduriCurente: [],
+  simbolComun: null,
+  jucatori: [],
+  onCorect: null,
+  onGresit: null,
+  seteazaJucatori: function (j) { this.jucatori = j; },
+  genereazaPachet: function () {
+    const n = this.simboluriPerCard;
+    const pool = simboluriAleatoare(n * n);
+    const baza = pool.slice(0, n);
+    this.pachet = [];
+    for (let i = 0; i <= Math.min(n, 18); i++) {
+      let simboluri;
+      if (i === 0) {
+        simboluri = [...baza];
+      } else {
+        simboluri = [
+          baza[i - 1],
+          ...pool.slice(n + (i - 1) * (n - 1), n + i * (n - 1)).slice(0, n - 1),
+        ];
+      }
+      const card = Object.create(Card);
+      card.init(simboluri);
+      this.pachet.push(card);
+    }
+  },
+  imparte: function () {
+    this.carduriCurente = [];
+    const numar = Math.min(2, this.jucatori.length, this.pachet.length);
+    for (let i = 0; i < numar; i++) {
+      const card = this.pachet.shift();
+      if (card) this.carduriCurente.push(card);
+    }
+    if (this.carduriCurente.length === 2) {
+      this.simbolComun = this.carduriCurente[0].gasesteComunul(this.carduriCurente[1]);
+    }
+    if (this.pachet.length === 0 && this.carduriCurente.length === 0) {
+      this.stare = 'ended';
+    }
+  },
+  start: function () {
+    if (!this.jucatori.length) return false;
+    this.stare = 'playing';
+    this.genereazaPachet();
+    this.imparte();
+    return true;
+  },
+  handleClick: function (jucator, simbol) {
+    if (this.stare !== 'playing' || !this.simbolComun) return;
+    if (simbol.name === this.simbolComun.name) {
+      jucator.puncte++;
+      if (this.onCorect) this.onCorect(jucator, simbol);
+      this.imparte();
+    } else {
+      if (this.onGresit) this.onGresit(jucator, simbol);
+    }
+  },
+  reseteaza: function () {
+    this.stare = 'idle';
+    this.pachet = [];
+    this.carduriCurente = [];
+    this.simbolComun = null;
+    this.jucatori.forEach((j) => { j.puncte = 0; });
+  },
+};
+
+// ── main (p5.js) ──────────────────────────────────────────────────────────────
+let butonStart;
+let butonReset;
+
+function setup() {
+  createCanvas(boardWidth, boardHeight).parent('canvasContainer');
+  frameRate(60);
+  butonStart = Object.create(Buton);
+  butonStart.init(boardWidth / 2 - 130, boardHeight - 55, 110, 36, '#27AE60', '▶  Start');
+  butonReset = Object.create(Buton);
+  butonReset.init(boardWidth / 2 + 20, boardHeight - 55, 110, 36, '#C0392B', '↺  Reset');
+}
+
+function draw() {
+  const W = boardWidth;
+  const H = boardHeight;
+background(0, 0); 
+noStroke();
+fill('#FFEE8C');
+rect(0, 0, W, H, 30);
+  noStroke(); fill(255, 255, 255, 10);
+  rect(0, 0, W, H, 30);
+  for (let x = 0; x < W; x += 36)
+    for (let y = 0; y < H; y += 36) circle(x + 18, y + 18, 2);
+  const carduri = joc.carduriCurente;
+  if (carduri.length >= 2) {
+    const r = Math.min(W * 0.21, H * 0.43, 148);
+    const gap = r + 18;
+    const cx = W / 2;
+    const cy = H * 0.48;
+    carduri[0].seteazaPozitie(cx - gap, cy);
+    carduri[1].seteazaPozitie(cx + gap, cy);
+    carduri[0].deseneaza();
+    carduri[1].deseneaza();
+    stroke(255, 255, 255, 40); strokeWeight(1);
+    drawingContext.setLineDash([5, 7]);
+    line(W / 2, 12, W / 2, H - 70);
+    drawingContext.setLineDash([]);
+    noStroke(); textSize(13); textAlign(CENTER, TOP);
+    if (jucatori[0]) {
+      fill(jucatori[0].culoare);
+      text(`${jucatori[0].nume}  ${jucatori[0].puncte}p`, cx - gap, 8);
+    }
+    if (jucatori[1]) {
+      fill(jucatori[1].culoare);
+      text(`${jucatori[1].nume}  ${jucatori[1].puncte}p`, cx + gap, 8);
+    }
+  } else {
+    textAlign(CENTER, CENTER); noStroke();
+    if (joc.stare === 'idle') {
+      textSize(W * 0.09); text('🎴', W / 2, H / 2 - 30);
+      fill(255, 255, 255, 140); textSize(W * 0.025);
+      text('Introdu jucătorii și apasă Start', W / 2, H / 2 + 40);
+    } else if (joc.stare === 'ended') {
+      textSize(W * 0.085); text('🏆', W / 2, H / 2 - 30);
+      fill(244, 208, 63); textSize(W * 0.028);
+      text('Joc terminat! Apasă Reset.', W / 2, H / 2 + 40);
+    }
+  }
+  butonStart.deseneaza();
+  butonReset.deseneaza();
+}
+
+function mousePressed() {
+  butonStart.esteClicat(mouseX, mouseY, startJoc);
+  butonReset.esteClicat(mouseX, mouseY, resetJoc);
+  if (joc.stare !== 'playing') return;
+  const jucator = mouseX < boardWidth / 2 ? jucatori[0] : jucatori[1];
+  if (!jucator) return;
+  for (const card of joc.carduriCurente) {
+    const sim = card.clicat(mouseX, mouseY);
+    if (sim) { joc.handleClick(jucator, sim); break; }
+  }
+}
+
+function startJoc() {
+  const n1 = document.getElementById('p1Name').value.trim();
+  const n2 = document.getElementById('p2Name').value.trim();
+  if (!n1) {
+    mesaj('⚠️ Introdu numele Jucătorului 1!');
+    document.getElementById('p1Name').focus();
+    return;
+  }
+  const noiJucatori = [
+    { id: 1, nume: n1, culoare: document.getElementById('p1Color').value, puncte: 0 },
+    { id: 2, nume: n2 || 'Jucător 2', culoare: document.getElementById('p2Color').value, puncte: 0 },
+  ];
+  seteazaJucatori(noiJucatori);
+  joc.seteazaJucatori(noiJucatori);
+  joc.onCorect = (j, s) => mesaj(`✅ ${j.nume} a găsit ${s.emoji}! +1 punct`);
+  joc.onGresit = (j, s) => mesaj(`❌ ${j.nume} a greșit cu ${s.emoji}`);
+  if (!joc.start()) return;
+  mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume}`);
+}
+
+function resetJoc() {
+  if (joc.stare === 'playing' && !confirm('Resetezi jocul?')) return;
+  seteazaJucatori([]);
+  joc.reseteaza();
+  mesaj('↺ Joc resetat.');
+}
+
+window.setup = setup;
+window.draw = draw;
+window.mousePressed = mousePressed;
 </script>
 </body>
-
 </html>
