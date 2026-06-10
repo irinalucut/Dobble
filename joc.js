@@ -1,11 +1,10 @@
-// joc.js — logica jocului Dobble (stare, pachet, împărțire cărți, verificare)
-
+// joc.js
 import { simboluriAleatoare } from './simboluri.js';
 import { Card } from './card.js';
 import { simboluriPerCard } from './config.js';
 
 export const joc = {
-  stare: 'idle', // 'idle' | 'playing' | 'ended'
+  stare: 'idle',
   simboluriPerCard: simboluriPerCard,
   pachet: [],
   carduriCurente: [],
@@ -23,7 +22,6 @@ export const joc = {
     const pool = simboluriAleatoare(n * n);
     const baza = pool.slice(0, n);
     this.pachet = [];
-
     for (let i = 0; i <= Math.min(n, 18); i++) {
       let simboluri;
       if (i === 0) {
@@ -40,7 +38,7 @@ export const joc = {
     }
   },
 
-  imparte: function () {
+  imparte: async function () {
     this.carduriCurente = [];
     const numar = Math.min(2, this.jucatori.length, this.pachet.length);
     for (let i = 0; i < numar; i++) {
@@ -48,39 +46,49 @@ export const joc = {
       if (card) this.carduriCurente.push(card);
     }
     if (this.carduriCurente.length === 2) {
-      this.simbolComun = this.carduriCurente[0].gasesteComunul(this.carduriCurente[1]);
+      this.simbolComun = await this.gasesteComun(
+        this.carduriCurente[0],
+        this.carduriCurente[1]
+      );
     }
     if (this.pachet.length === 0 && this.carduriCurente.length === 0) {
       this.stare = 'ended';
     }
   },
 
-  start: function () {
+  gasesteComun: function (card1, card2) {
+    return new Promise((resolve) => {
+      resolve(card1.gasesteComunul(card2));
+    });
+  },
+
+  start: async function () {
     if (!this.jucatori.length) return false;
     this.stare = 'playing';
     this.genereazaPachet();
-    this.imparte();
+    await this.imparte();
     return true;
   },
 
-  handleClick: function (jucator, simbol) {
+  handleClick: async function (jucator, simbol) {
     if (this.stare !== 'playing' || !this.simbolComun) return;
     if (simbol.name === this.simbolComun.name) {
       jucator.puncte++;
       if (this.onCorect) this.onCorect(jucator, simbol);
-      this.imparte();
+      await this.imparte();
     } else {
       if (this.onGresit) this.onGresit(jucator, simbol);
     }
   },
 
-  reseteaza: function () {
-    this.stare = 'idle';
-    this.pachet = [];
-    this.carduriCurente = [];
-    this.simbolComun = null;
-    this.jucatori.forEach((j) => {
-      j.puncte = 0;
+  reseteaza: async function () {
+    await new Promise((resolve) => {
+      this.stare = 'idle';
+      this.pachet = [];
+      this.carduriCurente = [];
+      this.simbolComun = null;
+      this.jucatori.forEach((j) => { j.puncte = 0; });
+      resolve();
     });
   },
 };

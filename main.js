@@ -1,5 +1,4 @@
-// main.js — orchestrare (setup / draw / mousePressed) + start / reset
-
+// main.js
 import { boardWidth, boardHeight } from './config.js';
 import { Buton } from './buton.js';
 import { joc } from './joc.js';
@@ -23,11 +22,10 @@ function draw() {
   const W = boardWidth;
   const H = boardHeight;
 
-  background(0, 0); 
-
-noStroke();
-fill('#FFEE8C');
-rect(0, 0, W, H, 30); 
+  background(0, 0);
+  noStroke();
+  fill('#FFEE8C');
+  rect(0, 0, W, H, 30);
   noStroke();
   fill(255, 255, 255, 10);
   for (let x = 0; x < W; x += 36)
@@ -46,14 +44,12 @@ rect(0, 0, W, H, 30);
     carduri[0].deseneaza();
     carduri[1].deseneaza();
 
-    // linie despărțitoare
     stroke(255, 255, 255, 40);
     strokeWeight(1);
     drawingContext.setLineDash([5, 7]);
     line(W / 2, 12, W / 2, H - 70);
     drawingContext.setLineDash([]);
 
-    // etichete jucători
     noStroke();
     textSize(13);
     textAlign(CENTER, TOP);
@@ -66,7 +62,6 @@ rect(0, 0, W, H, 30);
       text(`${jucatori[1].nume}  ${jucatori[1].puncte}p`, cx + gap, 8);
     }
   } else {
-    // ecran idle / ended
     textAlign(CENTER, CENTER);
     noStroke();
     if (joc.stare === 'idle') {
@@ -88,26 +83,25 @@ rect(0, 0, W, H, 30);
   butonReset.deseneaza();
 }
 
-function mousePressed() {
+async function mousePressed() {
   butonStart.esteClicat(mouseX, mouseY, startJoc);
   butonReset.esteClicat(mouseX, mouseY, resetJoc);
 
   if (joc.stare !== 'playing') return;
 
-  // jucătorul stânga = cardul din stânga, dreapta = cardul din dreapta
   const jucator = mouseX < boardWidth / 2 ? jucatori[0] : jucatori[1];
   if (!jucator) return;
 
   for (const card of joc.carduriCurente) {
     const sim = card.clicat(mouseX, mouseY);
     if (sim) {
-      joc.handleClick(jucator, sim);
+      await joc.handleClick(jucator, sim);
       break;
     }
   }
 }
 
-function startJoc() {
+async function startJoc() {
   const n1 = document.getElementById('p1Name').value.trim();
   const n2 = document.getElementById('p2Name').value.trim();
   if (!n1) {
@@ -126,14 +120,14 @@ function startJoc() {
   joc.onCorect = (j, s) => mesaj(`✅ ${j.nume} a găsit ${s.emoji}! +1 punct`);
   joc.onGresit = (j, s) => mesaj(`❌ ${j.nume} a greșit cu ${s.emoji}`);
 
-  if (!joc.start()) return;
+  if (!await joc.start()) return;
   mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume}`);
 }
 
-function resetJoc() {
+async function resetJoc() {
   if (joc.stare === 'playing' && !confirm('Resetezi jocul?')) return;
   seteazaJucatori([]);
-  joc.reseteaza();
+  await joc.reseteaza();
   mesaj('↺ Joc resetat.');
 }
 
