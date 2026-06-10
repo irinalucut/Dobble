@@ -1,363 +1,60 @@
 <!DOCTYPE html>
 <html lang="ro">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dobble</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
-<style>
-body {
-  background: #bd86ed;
-  color: white;
-  font-family: Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-  gap: 15px;
-}
-h1 { font-size: 2rem; margin: 0; }
-.players { display: flex; gap: 20px; }
-.player-input { display: flex; flex-direction: column; gap: 4px; }
-label { font-size: 12px; opacity: 0.6; }
-input[type="text"] {
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: 8px;
-  padding: 6px 10px;
-  color: white;
-  width: 150px;
-}
-#mesaj { font-size: 14px; opacity: 0.7; height: 20px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dobble</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    body {
+      background: #bd86ed;
+      color: white;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 15px;
+    }
+    h1 { font-size: 2rem; margin: 0; }
+    .players { display: flex; gap: 20px; }
+    .player-input { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 12px; opacity: 0.6; }
+    input[type="text"] {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 6px 10px;
+      color: white;
+      width: 150px;
+    }
+    #mesaj { font-size: 14px; opacity: 0.7; height: 20px; }
+  </style>
 </head>
 <body>
-<h1>🎲 Dobble</h1>
-<div class="players">
-  <div class="player-input">
-    <label>Jucător 1</label>
-    <div style="display:flex; gap:6px; align-items:center">
-      <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
-      <input id="p1Color" type="color" value="#F4D03F" />
+
+  <h1>🎲 Dobble</h1>
+
+  <div class="players">
+    <div class="player-input">
+      <label>Jucător 1</label>
+      <div style="display:flex; gap:6px; align-items:center">
+        <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
+        <input id="p1Color" type="color" value="#F4D03F" />
+      </div>
+    </div>
+    <div class="player-input">
+      <label>Jucător 2</label>
+      <div style="display:flex; gap:6px; align-items:center">
+        <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16" />
+        <input id="p2Color" type="color" value="#E63946" />
+      </div>
     </div>
   </div>
-  <div class="player-input">
-    <label>Jucător 2</label>
-    <div style="display:flex; gap:6px; align-items:center">
-      <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16" />
-      <input id="p2Color" type="color" value="#E63946" />
-    </div>
-  </div>
-</div>
-<div id="canvasContainer"></div>
-<div id="mesaj"></div>
 
-<script>
-// ── config ──────────────────────────────────────────────────────────────────
-const boardWidth = Math.min(window.innerWidth - 40, 720);
-const boardHeight = Math.round(boardWidth * 0.65);
-const simboluriPerCard = 7;
+  <div id="canvasContainer"></div>
+  <div id="mesaj"></div>
 
-// ── simboluri ────────────────────────────────────────────────────────────────
-const TOATE_SIMBOLURILE = [
-  ['🌟','stea'],['🔥','foc'],['🌊','val'],['🎯','tinta'],['⚡','fulger'],
-  ['🌈','curcubeu'],['🌵','cactus'],['🦋','fluture'],['🎃','dovleac'],['🔮','cristal'],
-  ['🎸','chitara'],['🚀','racheta'],['💎','diamant'],['🌙','luna'],['🐉','dragon'],
-  ['🦁','leu'],['🌺','floare'],['⚓','ancora'],['🎭','teatru'],['🏆','trofeu'],
-  ['🦄','unicorn'],['🍄','ciuperca'],['🎨','paleta'],['🌍','glob'],['🧲','magnet'],
-  ['🎲','zar'],['🌻','soare'],['🦊','vulpe'],['🐬','delfin'],['❤️','inima'],
-  ['🎵','nota'],['🌴','palmier'],['🦅','vultur'],['🍕','pizza'],['🌋','vulcan'],
-  ['🐙','caracatita'],['💧','lacrima'],['🦩','flamingo'],['🍦','inghetata'],['🎆','artificii'],
-  ['🌠','stea2'],['🧸','urs'],['🦚','paun'],['🎋','bambus'],['🏄','surf'],
-  ['🎻','vioara'],['🔒','lacat'],['🍳','ou'],['🎡','roata'],['🏔️','munte'],
-  ['🎪','cort'],['🥐','croissant'],['🍪','cookie'],['🍔','burger'],
-].map(([emoji, name]) => ({ emoji, name }));
-
-function simboluriAleatoare(numar) {
-  const lista = [...TOATE_SIMBOLURILE];
-  for (let i = lista.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [lista[i], lista[j]] = [lista[j], lista[i]];
-  }
-  return lista.slice(0, numar);
-}
-
-// ── Buton ────────────────────────────────────────────────────────────────────
-const Buton = {
-  x: 0, y: 0, width: 0, height: 0, culoare: '', eticheta: '',
-  init: function (x, y, width, height, culoare, eticheta) {
-    this.x = x; this.y = y;
-    this.width = width; this.height = height;
-    this.culoare = culoare; this.eticheta = eticheta;
-  },
-  deseneaza: function () {
-    fill(this.culoare); noStroke();
-    rect(this.x, this.y, this.width, this.height, 8);
-    fill(255); textAlign(CENTER, CENTER); textSize(14);
-    text(this.eticheta, this.x + this.width / 2, this.y + this.height / 2);
-  },
-  esteClicat: function (mx, my, callback) {
-    if (mx >= this.x && mx <= this.x + this.width &&
-        my >= this.y && my <= this.y + this.height) {
-      callback();
-    }
-  },
-};
-
-// ── Card ─────────────────────────────────────────────────────────────────────
-const Card = {
-  simboluri: [], x: 0, y: 0, raza: 155,
-  init: function (simboluri) {
-    this.simboluri = simboluri.map((s) => ({
-      emoji: s.emoji, name: s.name,
-      x: 0, y: 0, size: 40,
-      rotatie: Math.random() * 360,
-      selectat: false,
-    }));
-  },
-  asazaSimboluri: function () {
-    const primul = this.simboluri[0];
-    primul.x = this.x; primul.y = this.y;
-    const restul = this.simboluri.slice(1);
-    const razaOrbit = this.raza * 0.63;
-    restul.forEach((sim, i) => {
-      const unghi = (i / restul.length) * Math.PI * 2 - Math.PI / 2;
-      sim.x = this.x + Math.cos(unghi) * razaOrbit;
-      sim.y = this.y + Math.sin(unghi) * razaOrbit;
-    });
-  },
-  seteazaPozitie: function (x, y) {
-    this.x = x; this.y = y;
-    this.asazaSimboluri();
-  },
-  deseneaza: function () {
-    fill(255); stroke(200); strokeWeight(2);
-    circle(this.x, this.y, this.raza * 2);
-    this.simboluri.forEach((sim) => {
-      push();
-      translate(sim.x, sim.y);
-      rotate(radians(sim.rotatie * 0.07));
-      if (sim.selectat) {
-        noStroke(); fill('rgba(244,208,63,0.4)');
-        circle(0, 0, sim.size * 1.7);
-      }
-      textAlign(CENTER, CENTER); textSize(sim.size); noStroke();
-      text(sim.emoji, 0, 0);
-      pop();
-    });
-  },
-  clicat: function (mx, my) {
-    for (const sim of this.simboluri) {
-      const jumatate = sim.size / 2;
-      if (mx >= sim.x - jumatate && mx <= sim.x + jumatate &&
-          my >= sim.y - jumatate && my <= sim.y + jumatate) {
-        sim.selectat = !sim.selectat;
-        return sim;
-      }
-    }
-    return null;
-  },
-  areSimbol: function (name) {
-    return this.simboluri.some((s) => s.name === name);
-  },
-  gasesteComunul: function (altCard) {
-    return this.simboluri.find((s) => altCard.areSimbol(s.name)) || null;
-  },
-  reseteaza: function () {
-    this.simboluri.forEach((s) => { s.selectat = false; });
-  },
-};
-
-// ── jucatori ─────────────────────────────────────────────────────────────────
-let jucatori = [];
-
-function seteazaJucatori(noiJucatori) {
-  jucatori = noiJucatori;
-}
-
-function mesaj(text) {
-  const el = document.getElementById('mesaj');
-  el.textContent = text;
-  clearTimeout(mesaj._timer);
-  mesaj._timer = setTimeout(() => { el.textContent = ''; }, 3000);
-}
-
-// ── joc ───────────────────────────────────────────────────────────────────────
-const joc = {
-  stare: 'idle',
-  simboluriPerCard: simboluriPerCard,
-  pachet: [],
-  carduriCurente: [],
-  simbolComun: null,
-  jucatori: [],
-  onCorect: null,
-  onGresit: null,
-  seteazaJucatori: function (j) { this.jucatori = j; },
-  genereazaPachet: function () {
-    const n = this.simboluriPerCard;
-    const pool = simboluriAleatoare(n * n);
-    const baza = pool.slice(0, n);
-    this.pachet = [];
-    for (let i = 0; i <= Math.min(n, 18); i++) {
-      let simboluri;
-      if (i === 0) {
-        simboluri = [...baza];
-      } else {
-        simboluri = [
-          baza[i - 1],
-          ...pool.slice(n + (i - 1) * (n - 1), n + i * (n - 1)).slice(0, n - 1),
-        ];
-      }
-      const card = Object.create(Card);
-      card.init(simboluri);
-      this.pachet.push(card);
-    }
-  },
-  imparte: function () {
-    this.carduriCurente = [];
-    const numar = Math.min(2, this.jucatori.length, this.pachet.length);
-    for (let i = 0; i < numar; i++) {
-      const card = this.pachet.shift();
-      if (card) this.carduriCurente.push(card);
-    }
-    if (this.carduriCurente.length === 2) {
-      this.simbolComun = this.carduriCurente[0].gasesteComunul(this.carduriCurente[1]);
-    }
-    if (this.pachet.length === 0 && this.carduriCurente.length === 0) {
-      this.stare = 'ended';
-    }
-  },
-  start: function () {
-    if (!this.jucatori.length) return false;
-    this.stare = 'playing';
-    this.genereazaPachet();
-    this.imparte();
-    return true;
-  },
-  handleClick: function (jucator, simbol) {
-    if (this.stare !== 'playing' || !this.simbolComun) return;
-    if (simbol.name === this.simbolComun.name) {
-      jucator.puncte++;
-      if (this.onCorect) this.onCorect(jucator, simbol);
-      this.imparte();
-    } else {
-      if (this.onGresit) this.onGresit(jucator, simbol);
-    }
-  },
-  reseteaza: function () {
-    this.stare = 'idle';
-    this.pachet = [];
-    this.carduriCurente = [];
-    this.simbolComun = null;
-    this.jucatori.forEach((j) => { j.puncte = 0; });
-  },
-};
-
-// ── main (p5.js) ──────────────────────────────────────────────────────────────
-let butonStart;
-let butonReset;
-
-function setup() {
-  createCanvas(boardWidth, boardHeight).parent('canvasContainer');
-  frameRate(60);
-  butonStart = Object.create(Buton);
-  butonStart.init(boardWidth / 2 - 130, boardHeight - 55, 110, 36, '#27AE60', '▶  Start');
-  butonReset = Object.create(Buton);
-  butonReset.init(boardWidth / 2 + 20, boardHeight - 55, 110, 36, '#C0392B', '↺  Reset');
-}
-
-function draw() {
-  const W = boardWidth;
-  const H = boardHeight;
-background(0, 0); 
-noStroke();
-fill('#FFEE8C');
-rect(0, 0, W, H, 30);
-  noStroke(); fill(255, 255, 255, 10);
-  rect(0, 0, W, H, 30);
-  for (let x = 0; x < W; x += 36)
-    for (let y = 0; y < H; y += 36) circle(x + 18, y + 18, 2);
-  const carduri = joc.carduriCurente;
-  if (carduri.length >= 2) {
-    const r = Math.min(W * 0.21, H * 0.43, 148);
-    const gap = r + 18;
-    const cx = W / 2;
-    const cy = H * 0.48;
-    carduri[0].seteazaPozitie(cx - gap, cy);
-    carduri[1].seteazaPozitie(cx + gap, cy);
-    carduri[0].deseneaza();
-    carduri[1].deseneaza();
-    stroke(255, 255, 255, 40); strokeWeight(1);
-    drawingContext.setLineDash([5, 7]);
-    line(W / 2, 12, W / 2, H - 70);
-    drawingContext.setLineDash([]);
-    noStroke(); textSize(13); textAlign(CENTER, TOP);
-    if (jucatori[0]) {
-      fill(jucatori[0].culoare);
-      text(`${jucatori[0].nume}  ${jucatori[0].puncte}p`, cx - gap, 8);
-    }
-    if (jucatori[1]) {
-      fill(jucatori[1].culoare);
-      text(`${jucatori[1].nume}  ${jucatori[1].puncte}p`, cx + gap, 8);
-    }
-  } else {
-    textAlign(CENTER, CENTER); noStroke();
-    if (joc.stare === 'idle') {
-      textSize(W * 0.09); text('🎴', W / 2, H / 2 - 30);
-      fill(255, 255, 255, 140); textSize(W * 0.025);
-      text('Introdu jucătorii și apasă Start', W / 2, H / 2 + 40);
-    } else if (joc.stare === 'ended') {
-      textSize(W * 0.085); text('🏆', W / 2, H / 2 - 30);
-      fill(244, 208, 63); textSize(W * 0.028);
-      text('Joc terminat! Apasă Reset.', W / 2, H / 2 + 40);
-    }
-  }
-  butonStart.deseneaza();
-  butonReset.deseneaza();
-}
-
-function mousePressed() {
-  butonStart.esteClicat(mouseX, mouseY, startJoc);
-  butonReset.esteClicat(mouseX, mouseY, resetJoc);
-  if (joc.stare !== 'playing') return;
-  const jucator = mouseX < boardWidth / 2 ? jucatori[0] : jucatori[1];
-  if (!jucator) return;
-  for (const card of joc.carduriCurente) {
-    const sim = card.clicat(mouseX, mouseY);
-    if (sim) { joc.handleClick(jucator, sim); break; }
-  }
-}
-
-function startJoc() {
-  const n1 = document.getElementById('p1Name').value.trim();
-  const n2 = document.getElementById('p2Name').value.trim();
-  if (!n1) {
-    mesaj('⚠️ Introdu numele Jucătorului 1!');
-    document.getElementById('p1Name').focus();
-    return;
-  }
-  const noiJucatori = [
-    { id: 1, nume: n1, culoare: document.getElementById('p1Color').value, puncte: 0 },
-    { id: 2, nume: n2 || 'Jucător 2', culoare: document.getElementById('p2Color').value, puncte: 0 },
-  ];
-  seteazaJucatori(noiJucatori);
-  joc.seteazaJucatori(noiJucatori);
-  joc.onCorect = (j, s) => mesaj(`✅ ${j.nume} a găsit ${s.emoji}! +1 punct`);
-  joc.onGresit = (j, s) => mesaj(`❌ ${j.nume} a greșit cu ${s.emoji}`);
-  if (!joc.start()) return;
-  mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume}`);
-}
-
-function resetJoc() {
-  if (joc.stare === 'playing' && !confirm('Resetezi jocul?')) return;
-  seteazaJucatori([]);
-  joc.reseteaza();
-  mesaj('↺ Joc resetat.');
-}
-
-window.setup = setup;
-window.draw = draw;
-window.mousePressed = mousePressed;
-</script>
+  <script type="module" src="./main.js"></script>
 </body>
 </html>
