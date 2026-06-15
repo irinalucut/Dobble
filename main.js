@@ -2,6 +2,7 @@ import { boardWidth, boardHeight, PUNCTE_CASTIG } from './config.js';
 import { Buton } from './buton.js';
 import { joc } from './joc.js';
 import { jucatori, seteazaJucatori, mesaj } from './jucatori.js';
+import { Computer } from './computer.js';
 
 let butonStart;
 let butonReset;
@@ -34,6 +35,7 @@ function draw() {
   const carduri = joc.carduriCurente;
 
   if (joc.stare === 'ended' && joc.castigator) {
+    
     const castig = joc.castigator;
     const altul = jucatori.find((j) => j.id !== castig.id);
 
@@ -84,7 +86,9 @@ function draw() {
     }
     if (jucatori[1]) {
       fill(jucatori[1].culoare);
-      text(`${jucatori[1].nume}  ${jucatori[1].puncte}p`, cx + gap, 8);
+      
+      const numeP2 = Computer.activ ? `🤖 ${jucatori[1].nume}` : jucatori[1].nume;
+      text(`${numeP2}  ${jucatori[1].puncte}p`, cx + gap, 8);
     }
 
   } else {
@@ -110,21 +114,50 @@ async function mousePressed() {
 
   if (joc.stare !== 'playing') return;
 
-  const jucator = mouseX < boardWidth / 2 ? jucatori[0] : jucatori[1];
+
+  const eModComputer = Computer.activ;
+  const jucator = mouseX < boardWidth / 2 ? jucatori[0] : (eModComputer ? null : jucatori[1]);
   if (!jucator) return;
 
   for (const card of joc.carduriCurente) {
     const sim = card.clicat(mouseX, mouseY);
     if (sim) {
       await joc.handleClick(jucator, sim);
+
+      if (eModComputer && joc.stare === 'playing') {
+        planificaMutareComputer();
+      }
       break;
     }
   }
 }
 
+function planificaMutareComputer() {
+  Computer.planificaMutare(joc, async (simAles) => {
+    if (joc.stare !== 'playing' || !Computer.activ) return;
+
+    const jucatorPC = jucatori[1];
+    if (!jucatorPC) return;
+
+
+    simAles.selectat = true;
+
+    await new Promise((r) => setTimeout(r, 300));
+
+    simAles.selectat = false;
+
+    await joc.handleClick(jucatorPC, simAles);
+
+
+    if (joc.stare === 'playing' && Computer.activ) {
+      planificaMutareComputer();
+    }
+  });
+}
+
 async function startJoc() {
   const n1 = document.getElementById('p1Name').value.trim();
-  const n2 = document.getElementById('p2Name').value.trim();
+  const eModComputer = document.getElementById('modComputer').checked;
 
   if (!n1) {
     mesaj('⚠️ Introdu numele Jucătorului 1!');
@@ -132,27 +165,46 @@ async function startJoc() {
     return;
   }
 
+  const numePC = 'Easy Bot';
+  const n2 = eModComputer ? numePC : (document.getElementById('p2Name').value.trim() || 'Jucător 2');
+
   const noiJucatori = [
     { id: 1, nume: n1, culoare: document.getElementById('p1Color').value, puncte: 0 },
-    { id: 2, nume: n2 || 'Jucător 2', culoare: document.getElementById('p2Color').value, puncte: 0 },
+    { id: 2, nume: n2, culoare: eModComputer ? '#888888' : document.getElementById('p2Color').value, puncte: 0 },
   ];
 
   seteazaJucatori(noiJucatori);
   joc.seteazaJucatori(noiJucatori);
 
-  joc.onCorect = (j, s) => mesaj(`✅ ${j.nume} a găsit ${s.emoji}! +1 punct`);
-  joc.onGresit = (j, s) => mesaj(`❌ ${j.nume} a greșit cu ${s.emoji}`);
+  joc.onCorect = (j, s) => {
+    const prefix = Computer.activ && j.id === 2 ? '🤖' : '✅';
+    mesaj(`${prefix} ${j.nume} a găsit ${s.emoji}! +1 punct`);
+  };
+  joc.onGresit = (j, s) => {
+    const prefix = Computer.activ && j.id === 2 ? '🤖' : '❌';
+    mesaj(`${prefix} ${j.nume} a greșit cu ${s.emoji}`);
+  };
   joc.onCastig = (j) => {
-    const altul = noiJucatori.find((x) => x.id !== j.id);
     mesaj(`🏆 ${j.nume} a câștigat cu ${j.puncte} puncte!`, 0);
+    Computer.anuleaza();
   };
 
   if (!await joc.start()) return;
-  mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume} — primul la ${PUNCTE_CASTIG}p câștigă!`);
+
+  if (eModComputer) {
+    Computer.init(noiJucatori[1]);
+    mesaj(`🎮 ${n1} vs 🤖 ${numePC} — primul la ${PUNCTE_CASTIG}p câștigă!`);
+    
+    planificaMutareComputer();
+  } else {
+    Computer.reset();
+    mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume} — primul la ${PUNCTE_CASTIG}p câștigă!`);
+  }
 }
 
 async function resetJoc() {
   if (joc.stare === 'playing' && !confirm('Resetezi jocul?')) return;
+  Computer.reset();
   seteazaJucatori([]);
   await joc.reseteaza();
   mesaj('↺ Joc resetat.');

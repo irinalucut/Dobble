@@ -1,84 +1,107 @@
 <!DOCTYPE html>
 <html lang="ro">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dobble</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
-  <style>
-    body {
-      background: #bd86ed;
-      color: white;
-      font-family: Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
-      gap: 15px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dobble</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<style>
+body {
+  background: #bd86ed; color: white; font-family: Arial, sans-serif;
+  display: flex; flex-direction: column; align-items: center; padding: 20px; gap: 15px;
+}
+h1 { font-size: 2rem; margin: 0; }
+.players { display: flex; gap: 20px; align-items: flex-end; }
+.player-input { display: flex; flex-direction: column; gap: 4px; }
+label { font-size: 12px; opacity: 0.6; }
+input[type="text"] {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px; padding: 6px 10px; color: white; width: 150px;
+}
+#mesaj { font-size: 14px; opacity: 0.7; height: 20px; }
 
-    h1 {
-      font-size: 2rem;
-      margin: 0;
-    }
 
-    .players {
-      display: flex;
-      gap: 20px;
-    }
+.mod-joc {
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.mod-joc label { font-size: 12px; opacity: 0.6; }
+.toggle-wrap {
+  display: flex; align-items: center; gap: 8px; font-size: 13px;
+}
+.switch {
+  position: relative; display: inline-block; width: 42px; height: 22px;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255,255,255,0.2); border-radius: 22px; transition: .3s;
+}
+.slider:before {
+  position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+  background: white; border-radius: 50%; transition: .3s;
+}
+input:checked + .slider { background: #27AE60; }
+input:checked + .slider:before { transform: translateX(20px); }
 
-    .player-input {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    label {
-      font-size: 12px;
-      opacity: 0.6;
-    }
-
-    input[type="text"] {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
-      padding: 6px 10px;
-      color: white;
-      width: 150px;
-    }
-
-    #mesaj {
-      font-size: 14px;
-      opacity: 0.7;
-      height: 20px;
-    }
-  </style>
+#computerBadge {
+  display: none;
+  position: absolute;
+  font-size: 11px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+</style>
 </head>
-
 <body>
-  <h1>🎲 Dobble</h1>
-  <div class="players">
-    <div class="player-input">
-      <label>Jucător 1</label>
-      <div style="display:flex; gap:6px; align-items:center">
-        <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
-        <input id="p1Color" type="color" value="#F4D03F" />
-      </div>
-    </div>
-    <div class="player-input">
-      <label>Jucător 2</label>
-      <div style="display:flex; gap:6px; align-items:center">
-        <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16" />
-        <input id="p2Color" type="color" value="#E63946" />
-      </div>
+<h1>🎲 Dobble</h1>
+<div class="players">
+  <div class="player-input">
+    <label>Jucător 1</label>
+    <div style="display:flex; gap:6px; align-items:center">
+      <input id="p1Name" type="text" placeholder="Numele tău..." maxlength="16" />
+      <input id="p1Color" type="color" value="#F4D03F" />
     </div>
   </div>
-  
-  <div id="canvasContainer"></div>
-  <div id="mesaj"></div>
 
-  <script type="module" src="./main.js"></script>
+  <div class="mod-joc">
+    <label>Mod joc</label>
+    <div class="toggle-wrap">
+      <span>2P</span>
+      <label class="switch">
+        <input type="checkbox" id="modComputer" />
+        <span class="slider"></span>
+      </label>
+      <span>🤖</span>
+    </div>
+  </div>
+
+  <div class="player-input" id="p2Wrap">
+    <label>Jucător 2</label>
+    <div style="display:flex; gap:6px; align-items:center">
+      <input id="p2Name" type="text" placeholder="Numele tău..." maxlength="16" />
+      <input id="p2Color" type="color" value="#E63946" />
+    </div>
+  </div>
+</div>
+
+<div id="canvasContainer"></div>
+<div id="mesaj"></div>
+<script type="module" src="./main.js"></script>
+
+<script>
+  document.getElementById('modComputer').addEventListener('change', function () {
+    const p2Wrap = document.getElementById('p2Wrap');
+    if (this.checked) {
+      p2Wrap.style.opacity = '0.4';
+      p2Wrap.style.pointerEvents = 'none';
+      document.getElementById('p2Name').value = '';
+    } else {
+      p2Wrap.style.opacity = '1';
+      p2Wrap.style.pointerEvents = 'auto';
+    }
+  });
+</script>
 </body>
-
 </html>
