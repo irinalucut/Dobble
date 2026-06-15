@@ -1,5 +1,4 @@
-// main.js
-import { boardWidth, boardHeight } from './config.js';
+import { boardWidth, boardHeight, PUNCTE_CASTIG } from './config.js';
 import { Buton } from './buton.js';
 import { joc } from './joc.js';
 import { jucatori, seteazaJucatori, mesaj } from './jucatori.js';
@@ -26,6 +25,7 @@ function draw() {
   noStroke();
   fill('#FFEE8C');
   rect(0, 0, W, H, 30);
+
   noStroke();
   fill(255, 255, 255, 10);
   for (let x = 0; x < W; x += 36)
@@ -33,7 +33,31 @@ function draw() {
 
   const carduri = joc.carduriCurente;
 
-  if (carduri.length >= 2) {
+  if (joc.stare === 'ended' && joc.castigator) {
+    const castig = joc.castigator;
+    const altul = jucatori.find((j) => j.id !== castig.id);
+
+    textAlign(CENTER, CENTER);
+    noStroke();
+
+    textSize(W * 0.09);
+    text('🏆', W / 2, H / 2 - 55);
+
+    fill(castig.culoare);
+    textSize(W * 0.045);
+    text(`${castig.nume} a câștigat!`, W / 2, H / 2 + 5);
+
+    fill(80);
+    textSize(W * 0.026);
+    if (altul) {
+      text(
+        `${castig.nume} ${castig.puncte}p  —  ${altul.nume} ${altul.puncte}p`,
+        W / 2,
+        H / 2 + 45
+      );
+    }
+
+  } else if (carduri.length >= 2) {
     const r = Math.min(W * 0.21, H * 0.43, 148);
     const gap = r + 18;
     const cx = W / 2;
@@ -53,6 +77,7 @@ function draw() {
     noStroke();
     textSize(13);
     textAlign(CENTER, TOP);
+
     if (jucatori[0]) {
       fill(jucatori[0].culoare);
       text(`${jucatori[0].nume}  ${jucatori[0].puncte}p`, cx - gap, 8);
@@ -61,21 +86,17 @@ function draw() {
       fill(jucatori[1].culoare);
       text(`${jucatori[1].nume}  ${jucatori[1].puncte}p`, cx + gap, 8);
     }
+
   } else {
     textAlign(CENTER, CENTER);
     noStroke();
+
     if (joc.stare === 'idle') {
       textSize(W * 0.09);
       text('🔄', W / 2, H / 2 - 30);
       fill(255, 255, 255, 140);
       textSize(W * 0.025);
       text('Introdu jucătorii și apasă Start', W / 2, H / 2 + 40);
-    } else if (joc.stare === 'ended') {
-      textSize(W * 0.085);
-      text('🏆', W / 2, H / 2 - 30);
-      fill(244, 208, 63);
-      textSize(W * 0.028);
-      text('Joc terminat! Apasă Reset.', W / 2, H / 2 + 40);
     }
   }
 
@@ -104,6 +125,7 @@ async function mousePressed() {
 async function startJoc() {
   const n1 = document.getElementById('p1Name').value.trim();
   const n2 = document.getElementById('p2Name').value.trim();
+
   if (!n1) {
     mesaj('⚠️ Introdu numele Jucătorului 1!');
     document.getElementById('p1Name').focus();
@@ -117,11 +139,16 @@ async function startJoc() {
 
   seteazaJucatori(noiJucatori);
   joc.seteazaJucatori(noiJucatori);
+
   joc.onCorect = (j, s) => mesaj(`✅ ${j.nume} a găsit ${s.emoji}! +1 punct`);
   joc.onGresit = (j, s) => mesaj(`❌ ${j.nume} a greșit cu ${s.emoji}`);
+  joc.onCastig = (j) => {
+    const altul = noiJucatori.find((x) => x.id !== j.id);
+    mesaj(`🏆 ${j.nume} a câștigat cu ${j.puncte} puncte!`, 0);
+  };
 
   if (!await joc.start()) return;
-  mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume}`);
+  mesaj(`🎮 ${noiJucatori[0].nume} vs ${noiJucatori[1].nume} — primul la ${PUNCTE_CASTIG}p câștigă!`);
 }
 
 async function resetJoc() {
