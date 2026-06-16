@@ -35,7 +35,6 @@ function draw() {
   const carduri = joc.carduriCurente;
 
   if (joc.stare === 'ended' && joc.castigator) {
-    
     const castig = joc.castigator;
     const altul = jucatori.find((j) => j.id !== castig.id);
 
@@ -54,8 +53,7 @@ function draw() {
     if (altul) {
       text(
         `${castig.nume} ${castig.puncte}p  —  ${altul.nume} ${altul.puncte}p`,
-        W / 2,
-        H / 2 + 45
+        W / 2, H / 2 + 45
       );
     }
 
@@ -86,9 +84,10 @@ function draw() {
     }
     if (jucatori[1]) {
       fill(jucatori[1].culoare);
-      
-      const numeP2 = Computer.activ ? `🤖 ${jucatori[1].nume}` : jucatori[1].nume;
-      text(`${numeP2}  ${jucatori[1].puncte}p`, cx + gap, 8);
+      const prefix = Computer.activ
+        ? (Computer.mod === 'medium' ? '🧠' : '🤖')
+        : '';
+      text(`${prefix} ${jucatori[1].nume}  ${jucatori[1].puncte}p`, cx + gap, 8);
     }
 
   } else {
@@ -114,17 +113,22 @@ async function mousePressed() {
 
   if (joc.stare !== 'playing') return;
 
-
   const eModComputer = Computer.activ;
-  const jucator = mouseX < boardWidth / 2 ? jucatori[0] : (eModComputer ? null : jucatori[1]);
+  const jucator = mouseX < boardWidth / 2
+    ? jucatori[0]
+    : (eModComputer ? null : jucatori[1]);
   if (!jucator) return;
 
   for (const card of joc.carduriCurente) {
     const sim = card.clicat(mouseX, mouseY);
     if (sim) {
+      const puncteInainte = jucatori[0] ? jucatori[0].puncte : 0;
       await joc.handleClick(jucator, sim);
-
       if (eModComputer && joc.stare === 'playing') {
+        
+        if (jucatori[0] && jucatori[0].puncte > puncteInainte) {
+          Computer.resetRunda();
+        }
         planificaMutareComputer();
       }
       break;
@@ -139,17 +143,18 @@ function planificaMutareComputer() {
     const jucatorPC = jucatori[1];
     if (!jucatorPC) return;
 
-
     simAles.selectat = true;
-
-    await new Promise((r) => setTimeout(r, 300));
-
+    await new Promise((r) => setTimeout(r, 280));
     simAles.selectat = false;
 
+    const puncteInainte = jucatorPC.puncte;
     await joc.handleClick(jucatorPC, simAles);
 
-
     if (joc.stare === 'playing' && Computer.activ) {
+      
+      if (jucatorPC.puncte > puncteInainte) {
+        Computer.resetRunda();
+      }
       planificaMutareComputer();
     }
   });
@@ -157,7 +162,8 @@ function planificaMutareComputer() {
 
 async function startJoc() {
   const n1 = document.getElementById('p1Name').value.trim();
-  const eModComputer = document.getElementById('modComputer').checked;
+  const modJoc = window._modJoc || '2p';
+  const eModComputer = modJoc !== '2p';
 
   if (!n1) {
     mesaj('⚠️ Introdu numele Jucătorului 1!');
@@ -165,24 +171,32 @@ async function startJoc() {
     return;
   }
 
-  const numePC = 'Easy Bot';
-  const n2 = eModComputer ? numePC : (document.getElementById('p2Name').value.trim() || 'Jucător 2');
+  const numeBot = modJoc === 'medium' ? 'Medium Bot' : 'Easy Bot';
+  const culoareBot = modJoc === 'medium' ? '#3D85C8' : '#888888';
+
+  const n2 = eModComputer
+    ? numeBot
+    : (document.getElementById('p2Name').value.trim() || 'Jucător 2');
 
   const noiJucatori = [
     { id: 1, nume: n1, culoare: document.getElementById('p1Color').value, puncte: 0 },
-    { id: 2, nume: n2, culoare: eModComputer ? '#888888' : document.getElementById('p2Color').value, puncte: 0 },
+    { id: 2, nume: n2, culoare: eModComputer ? culoareBot : document.getElementById('p2Color').value, puncte: 0 },
   ];
 
   seteazaJucatori(noiJucatori);
   joc.seteazaJucatori(noiJucatori);
 
   joc.onCorect = (j, s) => {
-    const prefix = Computer.activ && j.id === 2 ? '🤖' : '✅';
-    mesaj(`${prefix} ${j.nume} a găsit ${s.emoji}! +1 punct`);
+    const icon = Computer.activ && j.id === 2
+      ? (Computer.mod === 'medium' ? '🧠' : '🤖')
+      : '✅';
+    mesaj(`${icon} ${j.nume} a găsit ${s.emoji}! +1 punct`);
   };
   joc.onGresit = (j, s) => {
-    const prefix = Computer.activ && j.id === 2 ? '🤖' : '❌';
-    mesaj(`${prefix} ${j.nume} a greșit cu ${s.emoji}`);
+    const icon = Computer.activ && j.id === 2
+      ? (Computer.mod === 'medium' ? '🧠' : '🤖')
+      : '❌';
+    mesaj(`${icon} ${j.nume} a greșit cu ${s.emoji}`);
   };
   joc.onCastig = (j) => {
     mesaj(`🏆 ${j.nume} a câștigat cu ${j.puncte} puncte!`, 0);
@@ -192,9 +206,9 @@ async function startJoc() {
   if (!await joc.start()) return;
 
   if (eModComputer) {
-    Computer.init(noiJucatori[1]);
-    mesaj(`🎮 ${n1} vs 🤖 ${numePC} — primul la ${PUNCTE_CASTIG}p câștigă!`);
-    
+    Computer.init(noiJucatori[1], modJoc); 
+    const icon = modJoc === 'medium' ? '🧠' : '🤖';
+    mesaj(`🎮 ${n1} vs ${icon} ${numeBot} — primul la ${PUNCTE_CASTIG}p câștigă!`);
     planificaMutareComputer();
   } else {
     Computer.reset();
